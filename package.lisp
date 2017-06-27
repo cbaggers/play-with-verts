@@ -1,5 +1,5 @@
 ;;;; package.lisp
 
-(defpackage #:play-with-verts
-  (:use #:cl #:cepl #:rtg-math #:nineveh #:vari))
-
+(uiop:define-package #:play-with-verts
+    (:use #:cl #:cepl #:rtg-math #:nineveh #:vari
+          #:issac :temporal-functions))

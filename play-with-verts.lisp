@@ -6,6 +6,9 @@
 (defvar *light-pos* (v! 0 30 -5))
 (defvar *albedo-sampler* nil)
 (defvar *specular-sampler* nil)
+(defvar *world* nil)
+(defvar *phys-sphere-geom* nil)
+(defvar *phys-floor* nil)
 
 ;;------------------------------------------------------------
 
@@ -23,32 +26,14 @@
 ;;------------------------------------------------------------
 
 (defclass thing ()
-  ((pos :initarg :pos :initform (v! 0 0 0) :accessor pos)
-   (rot :initarg :rot :initform (q:identity) :accessor rot)))
+  ((body :initarg :body
+         :initform nil
+         :accessor body)))
 
-;; Make a whole bunch of 'thing' instances.
-;; Give em random positions & rotations
-(defvar *things*
-  (loop for i below 40 collect
-       (make-instance
-        'thing
-        :pos (v3:+ (v! 0 0 -25)
-                   (v! (- (random 20) 10)
-                       (random 40)
-                       (- (random 20) 10)))
-        :rot (q:from-fixed-angles-v3
-              (v! (- (random 20f0) 10)
-                  (random 40f0)
-                  (- (random 20f0) 10))))))
+(defvar *things* nil)
 
-(defun get-model->world-space (thing)
-  (m4:* (m4:translation (pos thing))
-        (q:to-mat4 (rot thing))))
-
-(defun update-thing (thing)
-  (with-slots (pos) thing
-    (setf (y pos)
-          (mod (- (y pos) 0.000) 40f0))))
+(defmethod model->world ((thing thing))
+  (body-matrix4 (body thing)))
 
 ;;------------------------------------------------------------
 
@@ -153,7 +138,7 @@
          :light-pos *light-pos*
          :cam-pos (pos camera)
          :now (now)
-         :model->world (get-model->world-space thing)
+         :model->world (model->world thing)
          :world->view (get-world->view-space camera)
          :view->clip (rtg-math.projection:perspective
                       (x (resolution (current-viewport)))
@@ -164,7 +149,23 @@
          :albedo *albedo-sampler*
          :spec-map *specular-sampler*))
 
+(defun apply-gravity (body timestep)
+  (declare (ignore timestep))
+  (let ((mass (body-mass body)))
+    (setf (body-force body) (v! 0s0 (* -1.8 mass) 0s0 0s0))))
+
+(defvar *fps* 0)
+(defvar *fps-wip* 0)
+(defvar *stepper* (make-stepper (seconds 1)))
+
 (defun draw ()
+  (incf *fps-wip*)
+  (when (funcall *stepper*)
+    (setf *fps* (print *fps-wip*)
+          *fps-wip* 0))
+
+  (world-step *world* (/ 1f0 *fps*))
+
   ;; tell the host to pump all the events
   (step-host)
 
@@ -183,11 +184,12 @@
 
   ;; render ALL THE *THINGS*
   (loop :for thing :in *things* :do
-     (update-thing thing)
      (draw-thing thing *camera*))
 
   ;; display what we have drawn
   (swap))
+
+
 
 (defun init ()
   ;;
@@ -219,7 +221,40 @@
           (sample
            (dirt:load-image-to-texture
             (asdf:system-relative-pathname
-             :play-with-verts "container-specular.png"))))))
+             :play-with-verts "container-specular.png")))))
+
+  (unless *world*
+    (setf *world* (make-world)))
+  (unless *phys-sphere-geom*
+    (setf *phys-sphere-geom* (make-sphere-geometry *world*)))
+
+  ;; Make a whole bunch of 'thing' instances.
+  ;; Give em random positions & rotations
+  (unless *things*
+    (setf *things*
+          (loop :for i :below 40 :collect
+             (let ((body (make-body *world* *phys-sphere-geom*))
+                   (mat4 (m4:* (m4:translation
+                                (v3:+ (v! 0 0 -25)
+                                      (v! (- (random 20) 10)
+                                          (random 40)
+                                          (- (random 20) 10))))
+                               (q:to-mat4
+                                (q:from-fixed-angles-v3
+                                 (v! (- (random 20f0) 10)
+                                     (random 40f0)
+                                     (- (random 20f0) 10)))))))
+               (setf (body-force-torque-callback body) #'apply-gravity)
+               (setf (body-matrix4 body) mat4)
+               (make-instance 'thing :body body)))))
+  (unless *phys-floor*
+    (let ((points (list (list (v! -100s0 0s0  100s0)
+                              (v!  100s0 0s0  100s0)
+                              (v!  100s0 0s0 -100s0)
+                              (v! -100s0 0s0 -100s0)))))
+      (with-geometry (geom (make-geometry-tree *world* points))
+        (setf *phys-floor* (make-body *world* geom))))))
+
 
 (def-simple-main-loop play (:on-start #'init)
   (draw))
