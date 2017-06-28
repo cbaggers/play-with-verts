@@ -5,6 +5,7 @@
   :author "Your Name <your.name@example.com>"
   :license "Specify license here"
   :serial t
-  :depends-on (#:cepl.sdl2 #:nineveh :dirt)
+  :depends-on (#:cepl.sdl2 #:nineveh :dirt :cepl.skitter.sdl2
+                           :temporal-functions)
   :components ((:file "package")
                (:file "play-with-verts")))

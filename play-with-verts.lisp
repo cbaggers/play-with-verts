@@ -2,6 +2,9 @@
 
 (defvar *buf-stream* nil)
 (defvar *cube-stream* nil)
+(defvar *floor-stream* nil)
+(defvar *floor-sampler* nil)
+(defvar *alien-sampler* nil)
 (defvar *gpu-arr* nil)
 (defvar *light-pos* (v! 0 30 -5))
 (defvar *albedo-sampler* nil)
@@ -10,36 +13,56 @@
 ;;------------------------------------------------------------
 
 (defclass camera ()
-  ((pos :initform (v! 0 20 0) :accessor pos)
-   (rot :initform (q:identity) :accessor rot)))
+  ((pos :initform (v! 0 15 20) :accessor pos)
+   (rot :initform (q! 0.98384374 -0.17902958 0.0 0.0)
+        :accessor rot)))
 
 (defvar *camera* (make-instance 'camera))
 (defvar *camera-1* (make-instance 'camera))
 
 (defun get-world->view-space (camera)
-  (m4:* (m4:translation (v3:negate (pos camera)))
-        (q:to-mat4 (q:inverse (rot camera)))))
+  (m4:* (q:to-mat4 (q:inverse (rot camera)))
+        (m4:translation (v3:negate (pos camera)))))
+
+(defun update-camera (camera)
+  (when (keyboard-button (keyboard) key.w)
+    (v3:incf (pos camera)
+             (v3:*s (q:to-direction (rot camera))
+                    (* 10 *delta*))))
+
+  (when (keyboard-button (keyboard) key.s)
+    (v3:decf (pos camera)
+             (v3:*s (q:to-direction (rot camera))
+                    (* 10 *delta*))))
+
+  (when (mouse-button (mouse) mouse.left)
+    (let ((move (v2:*s (mouse-move (mouse))
+                       0.03)))
+      (setf (rot camera)
+            (q:normalize
+             (q:* (rot camera)
+                  (q:normalize
+                   (q:from-axis-angle (v! 1 0 0) (- (y move)))
+                        ;;(q:from-axis-angle (v! 0 1 0) (- (x move)))
+                        )))))))
 
 ;;------------------------------------------------------------
 
 (defclass thing ()
-  ((pos :initarg :pos :initform (v! 0 0 0) :accessor pos)
+  ((stream :initarg :stream :initform nil :accessor buf-stream)
+   (sampler :initarg :sampler :initform nil :accessor sampler)
+   (pos :initarg :pos :initform (v! 0 0 0) :accessor pos)
    (rot :initarg :rot :initform (q:identity) :accessor rot)))
+
+(defclass bullet (thing)
+  ((stream :initform *cube-stream*)))
 
 ;; Make a whole bunch of 'thing' instances.
 ;; Give em random positions & rotations
-(defvar *things*
-  (loop for i below 40 collect
-       (make-instance
-        'thing
-        :pos (v3:+ (v! 0 0 -25)
-                   (v! (- (random 20) 10)
-                       (random 40)
-                       (- (random 20) 10)))
-        :rot (q:from-fixed-angles-v3
-              (v! (- (random 20f0) 10)
-                  (random 40f0)
-                  (- (random 20f0) 10))))))
+(defvar *player* nil)
+(defvar *things* nil)
+(defvar *floor* nil)
+(defvar *bullets* nil)
 
 (defun get-model->world-space (thing)
   (m4:* (m4:translation (pos thing))
@@ -47,20 +70,33 @@
 
 (defun update-thing (thing)
   (with-slots (pos) thing
-    (setf (y pos)
-          (mod (- (y pos) 0.000) 40f0))))
+    (decf (y pos) (* 8 *delta*))
+    (when (< (y pos) -2f0)
+      (setf (y pos) 40f0))
+    (unless (loop :for bullet :in *bullets* :never
+               (< (v3:length (v3:- (pos bullet) (pos thing)))
+                  1.2))
+      (setf *things* (remove thing *things*)))))
+
+(defun update-bullet (bullet)
+  (with-slots (pos) bullet
+    (incf (y pos) (* 16 *delta*))
+    (when (> (y pos) 50f0)
+      (setf *bullets*
+            (remove bullet *bullets*)))))
 
 ;;------------------------------------------------------------
 
 ;; We will use this function as our vertex shader
 (defun-g some-vert-stage ((vert g-pnt)
                           &uniform (now :float)
+                          (scale :float)
                           (model->world :mat4)
                           (world->view :mat4)
                           (view->clip :mat4))
   (let* (;; Unpack the data from our vert
          ;; (pos & normal are in model space)
-         (pos (pos vert))
+         (pos (* (pos vert) scale))
          (normal (norm vert))
          (uv (tex vert))
 
@@ -146,27 +182,58 @@
   (/ (float (get-internal-real-time))
      5000))
 
-(defun draw-thing (thing camera)
+(defun draw-thing (thing camera &optional (scale 1f0))
   ;; Here we just call our pipeline with all the data, we
   ;; should really put some of this in our 'thing' objects
-  (map-g #'some-pipeline *buf-stream*
+  (map-g #'some-pipeline (buf-stream thing)
          :light-pos *light-pos*
          :cam-pos (pos camera)
          :now (now)
+         :scale scale
          :model->world (get-model->world-space thing)
          :world->view (get-world->view-space camera)
          :view->clip (rtg-math.projection:perspective
                       (x (resolution (current-viewport)))
                       (y (resolution (current-viewport)))
                       0.1
-                      30f0
+                      200f0
                       60f0)
-         :albedo *albedo-sampler*
+         :albedo (sampler thing)
          :spec-map *specular-sampler*))
 
+(defvar *fps* 0)
+(defvar *fps-wip* 0)
+(defvar *stepper* (make-stepper (seconds 1)))
+(defvar *delta* 1)
+(defvar *can-fire* t)
+
 (defun draw ()
+  (incf *fps-wip*)
+  (when (funcall *stepper*)
+    (setf *fps* *fps-wip*
+          *fps-wip* 0))
+  (setf *delta* (min 0.5 (/ 1.0 *fps*)))
+
   ;; tell the host to pump all the events
   (step-host)
+
+  ;; foooooo
+  (let ((pos (gamepad-2d (gamepad) 0)))
+    (setf (pos *player*)
+          (v3:*s (v! (x pos) 0 (- (y pos)))
+                 10.0))
+    (if (gamepad-button (gamepad) 0)
+        (when *can-fire*
+          (setf *can-fire* nil)
+          (push (make-instance 'bullet
+                               :pos (pos *player*)
+                               :sampler *alien-sampler*)
+                *bullets*))
+        (setf *can-fire* t)))
+
+  ;; update camera
+
+  (update-camera *camera*)
 
   ;; Update the position of our light
   (let ((val (* 10 (now))))
@@ -186,8 +253,16 @@
      (update-thing thing)
      (draw-thing thing *camera*))
 
+  (loop :for bullet :in *bullets* :do
+     (update-bullet bullet)
+     (draw-thing bullet *camera* 0.4))
+
+  (draw-thing *player* *camera*)
+  (draw-thing *floor* *camera*)
+
   ;; display what we have drawn
-  (swap))
+  (swap)
+  (decay-events))
 
 (defun init ()
   ;;
@@ -205,6 +280,14 @@
       (setf *buf-stream*
             (make-buffer-stream vert :index-array index))))
   ;;
+  ;; The data for the floor
+  (unless *floor-stream*
+    (destructuring-bind (vert index)
+        (nineveh.mesh.data.primitives:box-gpu-arrays
+         :width 40 :depth 40)
+      (setf *floor-stream*
+            (make-buffer-stream vert :index-array index))))
+  ;;
   ;; The color for our object
   (unless *albedo-sampler*
     (setf *albedo-sampler*
@@ -219,7 +302,39 @@
           (sample
            (dirt:load-image-to-texture
             (asdf:system-relative-pathname
-             :play-with-verts "container-specular.png"))))))
+             :play-with-verts "container-specular.png")))))
+
+  (unless *things*
+    (loop for i below 40 collect
+         (make-instance
+          'thing
+          :sampler *albedo-sampler*
+          :stream *buf-stream*
+          :pos (v! (- (random 20) 10)
+                   (+ 10 (random 40))
+                   (- (random 20) 10))
+          :rot (q:from-fixed-angles-v3
+                (v! (- (random 20f0) 10)
+                    (random 40f0)
+                    (- (random 20f0) 10))))))
+
+  (unless *player*
+    (setf *player*
+          (make-instance
+           'thing
+           :sampler *albedo-sampler*
+           :stream *cube-stream*
+           :pos (v! 0 0 0)
+           :rot (q:identity))))
+
+  (unless *floor*
+    (setf *floor*
+          (make-instance
+           'thing
+           :sampler *floor-sampler*
+           :stream *floor-stream*
+           :pos (v! 0 0 0)
+           :rot (q:identity)))))
 
 (def-simple-main-loop play (:on-start #'init)
   (draw))
