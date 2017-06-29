@@ -15,9 +15,6 @@
           *fps-wip* 0))
   (setf *delta* (min 0.5 (/ 1.0 *fps*)))
 
-  ;; tell the host to pump all the events
-  (step-host)
-
   ;; update camera
   (update-camera *camera* *delta*)
 
