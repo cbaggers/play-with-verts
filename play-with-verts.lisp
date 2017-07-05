@@ -26,7 +26,14 @@
   (when (funcall *stepper*)
     (setf *fps* *fps-wip*
           *fps-wip* 0))
-  (setf *delta* (min 0.01 (/ 1.0 *fps*)))
+
+  (let* ((now (get-internal-real-time))
+         (delta (* (- now *last-time*) 0.001))
+         (delta (if (> delta 0.16)
+                    0.00001
+                    delta)))
+    (setf *delta* delta)
+    (setf *last-time* now))
 
   ;; update camera
   (update-camera *camera* *delta*)
