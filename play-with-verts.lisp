@@ -52,7 +52,7 @@
   (loop :for thing :in *falling-things* :do
      (update-falling-thing thing)
      (draw-thing thing)
-     (draw-shadow thing))
+     (draw-thing (drop-shadow thing)))
 
   (loop :for thing :in *stuck-things* :do
      (draw-thing thing))
