@@ -19,10 +19,11 @@
 ;;------------------------------------------------------------
 ;; Falling things
 
-(defclass falling-thing (thing) ())
+(defclass falling-thing (thing)
+  ((shadow-stream :initform (cylinder 2f0 0.1))))
 
-(defclass pepperoni (thing) ())
-(defclass olive (thing) ())
+(defclass pepperoni (falling-thing) ())
+(defclass olive (falling-thing) ())
 
 (defvar *falling-things* nil)
 (defvar *stuck-things* nil)
@@ -57,6 +58,20 @@
               (* (cos angle) dist))
      :rot (q:identity))))
 
+(defun get-shadow-model->world-space (thing)
+  (let* ((p (pos thing))
+        (p (v! (x p) 0.09 (z p))))
+    (m4:* (m4:translation p)
+          (q:to-mat4 (rot thing)))))
+
+(defun draw-shadow (thing)
+  ;; Here we just call our pipeline with all the data, we
+  ;; should really put some of this in our 'thing' objects
+  (map-g #'some-pipeline (slot-value thing 'shadow-stream)
+         :scale 1f0
+         :model->world (get-shadow-model->world-space thing)
+         :albedo (tex "shadow.png")
+         :spec-map (specular-sampler thing)))
 
 (defun update-falling-thing (thing)
   (with-slots (pos) thing
@@ -83,9 +98,11 @@
             (remove thing *falling-things*))
       (etypecase thing
         (pepperoni
+         (push (make-pepperoni nil) *falling-things*)
          (decf *score* 4)
          (print "NNOOOOO THE MEAT!!"))
         (olive
+         (push (make-olive nil) *falling-things*)
          (incf *score* 5)
          (print "DIE OLIVE SCUM!"))))))
 
@@ -149,6 +166,7 @@
          :stream (cylinder 30f0 1f0)
          :sampler (tex "sauce.png")
          :crust-bit (make-crust-bit))))
+
 
 (defun draw-pizza (pizza)
   (draw-thing pizza)
