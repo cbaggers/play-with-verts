@@ -3,8 +3,7 @@
 ;;------------------------------------------------------------
 
 (defclass thing ()
-  ((stream
-    :initarg :stream :initform nil :accessor buf-stream)
+  (
    (sampler
     :initarg :sampler :initform nil :accessor sampler)
    (specular-sampler
@@ -22,22 +21,25 @@
 
 ;;------------------------------------------------------------
 
-(defun draw-thing (thing camera)
-  ;; Here we just call our pipeline with all the data, we
-  ;; should really put some of this in our 'thing' objects
-  (map-g #'some-pipeline (buf-stream thing)
+(defun upload-uniforms-for-cam (camera)
+  (map-g #'some-pipeline nil
          :light-pos *light-pos*
          :cam-pos (pos camera)
          :now (now)
-         :scale (scale thing)
-         :model->world (get-model->world-space thing)
          :world->view (get-world->view-space camera)
          :view->clip (rtg-math.projection:perspective
-                      (x (resolution (current-viewport)))
-                      (y (resolution (current-viewport)))
+                      (x (viewport-resolution (current-viewport)))
+                      (y (viewport-resolution (current-viewport)))
                       0.1
                       200f0
-                      60f0)
+                      60f0)))
+
+(defun draw-thing (thing)
+  ;; Here we just call our pipeline with all the data, we
+  ;; should really put some of this in our 'thing' objects
+  (map-g #'some-pipeline (buf-stream thing)
+         :scale (scale thing)
+         :model->world (get-model->world-space thing)
          :albedo (sampler thing)
          :spec-map (specular-sampler thing)))
 

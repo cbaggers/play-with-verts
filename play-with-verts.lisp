@@ -2,18 +2,31 @@
 
 ;;------------------------------------------------------------
 
+(defvar *score* 100)
+(defvar *high-score* 100)
+
 (defvar *fps* 0)
 (defvar *fps-wip* 0)
 (defvar *stepper* (make-stepper (seconds 1)))
 (defvar *delta* 1)
 (defvar *can-fire* t)
+(defvar *last-time* (get-internal-real-time))
+
+(defun reset ()
+  (setf *score* 100
+        *stuck-things* nil
+        *falling-things*
+        (append (loop :for i :below 6 :collect
+                   (make-pepperoni))
+                (loop :for i :below 10 :collect
+                   (make-olive)))))
 
 (defun draw ()
   (incf *fps-wip*)
   (when (funcall *stepper*)
     (setf *fps* *fps-wip*
           *fps-wip* 0))
-  (setf *delta* (min 0.5 (/ 1.0 *fps*)))
+  (setf *delta* (min 0.01 (/ 1.0 *fps*)))
 
   ;; update camera
   (update-camera *camera* *delta*)
@@ -32,19 +45,30 @@
   (clear)
 
   ;; render ALL THE *THINGS*
-  (draw-thing *floor* *camera*)
+  (upload-uniforms-for-cam *camera*)
 
-  (loop :for thing :in *things* :do
+  (draw-pizza *pizza-base*)
+
+  (loop :for thing :in *falling-things* :do
      (update-falling-thing thing)
-     (draw-thing thing *camera*))
+     (draw-thing thing))
+
+  (loop :for thing :in *stuck-things* :do
+     (draw-thing thing))
 
   (loop :for bullet :in *bullets* :do
      (update-bullet bullet)
-     (draw-thing bullet *camera*))
+     (draw-thing bullet))
 
   ;; player
   (update-player *player*)
-  (draw-thing *player* *camera*)
+  (draw-thing *player*)
+
+  ;; game state stuff
+  (setf *high-score* (max *high-score* *score*))
+  (when (<= *score* 0)
+    (print "YOU SUCK!")
+    (reset))
 
   ;; display what we have drawn
   (swap)
@@ -60,7 +84,9 @@
     (setf *player* (make-player)))
 
   (unless *floor*
-    (setf *floor* (make-floor))))
+    (setf *floor* (make-floor)))
+
+  (reset))
 
 
 (def-simple-main-loop play (:on-start #'init)

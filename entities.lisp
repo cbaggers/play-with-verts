@@ -21,31 +21,73 @@
 
 (defclass falling-thing (thing) ())
 
-(defvar *things* nil)
+(defclass pepperoni (thing) ())
+(defclass olive (thing) ())
 
-(defun make-falling-thing ()
-  (make-instance
-   'thing
-   :sampler (tex "container-albedo.png")
-   :specular (tex "container-specular.png")
-   :stream (sphere)
-   :pos (v! (- (random 20) 10)
-            (+ 10 (random 40))
-            (- (random 20) 10))
-   :rot (q:from-fixed-angles-v3
-         (v! (- (random 20f0) 10)
-             (random 40f0)
-             (- (random 20f0) 10)))))
+(defvar *falling-things* nil)
+(defvar *stuck-things* nil)
+
+(defun make-pepperoni (&optional (random-y t))
+  (let ((angle (random 2pi-f))
+        (dist (random 23)))
+    (make-instance
+     'pepperoni
+     :sampler (tex "container-albedo.png")
+     :specular (tex "container-specular.png")
+     :stream (cylinder 2.0 0.1)
+     :pos (v! (* (sin angle) dist)
+              (if random-y
+                  (+ 10 (random 40))
+                  40)
+              (* (cos angle) dist))
+     :rot (q:identity))))
+
+(defun make-olive (&optional (random-y t))
+  (let ((angle (random 2pi-f))
+        (dist (random 23)))
+    (make-instance
+     'olive
+     :sampler (tex "container-albedo.png")
+     :specular (tex "container-specular.png")
+     :stream (sphere 1)
+     :pos (v! (* (sin angle) dist)
+              (if random-y
+                  (+ 10 (random 40))
+                  40)
+              (* (cos angle) dist))
+     :rot (q:identity))))
+
 
 (defun update-falling-thing (thing)
   (with-slots (pos) thing
     (decf (y pos) (* 8 *delta*))
-    (when (< (y pos) -2f0)
-      (setf (y pos) 40f0))
+    (when (< (y pos) 0f0)
+      (setf (y pos) 0f0)
+      (setf *falling-things* (remove thing *falling-things*))
+
+      (push thing *stuck-things*)
+      (etypecase thing
+        (pepperoni
+         (push (make-pepperoni nil) *falling-things*)
+         (incf *score*))
+        (olive
+         (push (make-olive nil) *falling-things*)
+         (decf *score* 2)))
+      (when (= 0 (mod *score* 10))
+        (format t "~%SCORE IS NOW ~a" *score*)))
+
     (unless (loop :for bullet :in *bullets* :never
                (< (v3:length (v3:- (pos bullet) (pos thing)))
                   1.2))
-      (setf *things* (remove thing *things*)))))
+      (setf *falling-things*
+            (remove thing *falling-things*))
+      (etypecase thing
+        (pepperoni
+         (decf *score* 4)
+         (print "NNOOOOO THE MEAT!!"))
+        (olive
+         (incf *score* 5)
+         (print "DIE OLIVE SCUM!"))))))
 
 ;;------------------------------------------------------------
 ;; Player
@@ -64,10 +106,14 @@
    :rot (q:identity)))
 
 (defun update-player (player)
-  (let ((pos (gamepad-2d (gamepad) 0)))
+  (let* ((pos (gamepad-2d (gamepad) 0))
+         (gpos (v! (x pos) 0 (- (y pos))))
+         (glen (min (v3:length gpos) 1f0))
+         (gpos (v3:*s (v3:normalize gpos)
+                      glen)))
     (setf (pos player)
-          (v3:*s (v! (x pos) 0 (- (y pos)))
-                 10.0))
+          (v3:*s gpos
+                 22.0))
     (if (gamepad-button (gamepad) 0)
         (when *can-fire*
           (setf *can-fire* nil)
@@ -78,21 +124,42 @@
         (setf *can-fire* t))))
 
 ;;------------------------------------------------------------
-;; Floor
+;; Pizza
 
-(defclass scenery (thing) ())
+(defvar *pizza-base* nil)
 
-(defvar *floor* nil)
+(defclass pizza (thing)
+  ((crust-bit
+    :initarg :crust-bit :initform nil :accessor crust-bit)))
 
-(defun make-floor ()
-  (setf *floor*
+(defclass crust-bit (thing) ())
+
+(defun make-crust-bit ()
+  (make-instance
+   'crust-bit
+   :scale 2f0
+   :stream (sphere)
+   :sampler (tex "bread.jpg")))
+
+(defun make-pizza-base ()
+  (setf *pizza-base*
         (make-instance
-         'scenery
-         :sampler (tex "lava.png")
-         :specular (tex "container-specular.png")
-         :stream (box 40 1 40)
-         :pos (v! 0 -1 0)
-         :rot (q:identity))))
+         'pizza
+         :pos (v! 0 -1.5 0)
+         :stream (cylinder 30f0 1f0)
+         :sampler (tex "sauce.png")
+         :crust-bit (make-crust-bit))))
+
+(defun draw-pizza (pizza)
+  (draw-thing pizza)
+  (let* ((bits 50)
+         (step (/ 2pi-f bits)))
+    (loop :for i :below bits :do
+       (setf (pos (crust-bit pizza))
+             (v! (* 30 (sin (* i step)))
+                 2
+                 (* 30 (cos (* i step)))))
+       (draw-thing (crust-bit pizza)))))
 
 ;;------------------------------------------------------------
 ;; Light

@@ -26,6 +26,15 @@
           (setf (gethash key *meshes*)
                 (make-buffer-stream vert :index-array index))))))
 
+(defun cylinder (&optional (radius 1f0) (height 1f0))
+  (let ((key (list radius height)))
+    (or (gethash key *meshes*)
+        (destructuring-bind (vert index)
+            (nineveh.mesh.data.primitives:cylinder-gpu-arrays :radius radius
+                                                              :height height)
+          (setf (gethash key *meshes*)
+                (make-buffer-stream vert :index-array index))))))
+
 ;;------------------------------------------------------------
 ;; Textures & Samplers
 ;;
@@ -34,7 +43,12 @@
 
 (defvar *samplers* (make-hash-table :test #'equal))
 
-(defun tex (path)
+(defun tex (path &optional (force nil))
+  (when force
+    (let ((s (gethash path *samplers*)))
+      (when s
+        (free (sampler-texture s)))
+      (remhash path *samplers*)))
   (or (gethash path *samplers*)
       (setf (gethash path *samplers*)
             (sample

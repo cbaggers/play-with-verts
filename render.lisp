@@ -54,7 +54,7 @@
          (frag-normal (normalize frag-normal))
 
          ;; ambient color is the same from all directions
-         (ambient 0.1)
+         (ambient 0.2)
 
          ;; diffuse color is the cosine of the angle between the light
          ;; and the normal. As both the vectors are normalized we can
@@ -78,7 +78,8 @@
          ;; The final light amount is the sum of the different components
          (light-amount (+ ambient
                           diffuse
-                          specular)))
+                          ;;specular
+                          )))
 
     ;; And we multipy with the object color. This means that 0 light results
     ;; in no color, and 1 light results in full color. Cool!
