@@ -3,7 +3,8 @@
 ;;------------------------------------------------------------
 
 (defclass thing ()
-  (
+  ((stream
+    :initarg :stream :initform nil :accessor buf-stream)
    (sampler
     :initarg :sampler :initform nil :accessor sampler)
    (specular-sampler

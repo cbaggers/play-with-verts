@@ -3,8 +3,9 @@
 ;;------------------------------------------------------------
 
 (defclass camera ()
-  ((pos :initform (v! 0 15 20) :accessor pos)
-   (rot :initform (q! 0.98384374 -0.17902958 0.0 0.0)
+  ((pos :initform (v! -0.43 25.33 43.20)
+        :accessor pos)
+   (rot :initform (v! 0.97 -0.20 -0.01 0.0)
         :accessor rot)))
 
 (defvar *camera* (make-instance 'camera))

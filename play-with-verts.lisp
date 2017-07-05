@@ -77,15 +77,11 @@
 
 
 (defun init ()
-  (unless *things*
-    (loop :for i :below 40 :do
-       (push (make-falling-thing) *things*)))
-
   (unless *player*
-    (setf *player* (make-player)))
+    (make-player))
 
-  (unless *floor*
-    (setf *floor* (make-floor)))
+  (unless *pizza-base*
+    (make-pizza-base))
 
   (reset))
 

@@ -114,13 +114,14 @@
 (defvar *player* nil)
 
 (defun make-player ()
-  (make-instance
-   'thing
-   :sampler (tex "container-albedo.png")
-   :specular (tex "container-specular.png")
-   :stream (box)
-   :pos (v! 0 0 0)
-   :rot (q:identity)))
+  (setf *player*
+        (make-instance
+         'thing
+         :sampler (tex "container-albedo.png")
+         :specular (tex "container-specular.png")
+         :stream (box)
+         :pos (v! 0 0 0)
+         :rot (q:identity))))
 
 (defun update-player (player)
   (let* ((pos (gamepad-2d (gamepad) 0))
@@ -154,7 +155,7 @@
 (defun make-crust-bit ()
   (make-instance
    'crust-bit
-   :scale 2f0
+   :scale 4f0
    :stream (sphere)
    :sampler (tex "bread.jpg")))
 
