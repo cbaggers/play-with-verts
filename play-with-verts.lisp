@@ -9,12 +9,17 @@
   (setf *things* nil)
   (make-ground))
 
+(defparameter *stepper* (make-stepper (seconds 0.3)))
+
 (defun game-step ()
   (let* ((now (get-internal-real-time))
          (delta (* (- now *last-time*) 0.001))
          (delta (if (> delta 0.16) 0.00001 delta)))
     (setf *delta* delta)
     (setf *last-time* now))
+
+  (when (funcall *stepper*)
+    (draw-lsystem (lsys-run *rules* '(F) 4)))
 
   ;; update camera
   (update-camera *camera* *delta*)
