@@ -91,3 +91,18 @@
   (some-frag-stage :vec3 :vec3 :vec2))
 
 ;;------------------------------------------------------------
+
+(defun upload-uniforms-for-cam (camera)
+  (map-g #'some-pipeline nil
+         :light-pos *light-pos*
+         :cam-pos (pos camera)
+         :now (now)
+         :world->view (get-world->view-space camera)
+         :view->clip (rtg-math.projection:perspective
+                      (x (viewport-resolution (current-viewport)))
+                      (y (viewport-resolution (current-viewport)))
+                      0.1
+                      200f0
+                      60f0)))
+
+;;------------------------------------------------------------

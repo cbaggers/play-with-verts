@@ -36,4 +36,9 @@
                    (q:* (q:from-axis-angle (v! 1 0 0) (- (y move)))
                         (q:from-axis-angle (v! 0 1 0) (- (x move)))))))))))
 
+(defun reset-camera (&optional (cam *camera*))
+  (setf (pos cam) (v! -0.43 25.33 43.20)
+        (rot cam) (v! 0.97 -0.20 -0.01 0.0))
+  cam)
+
 ;;------------------------------------------------------------

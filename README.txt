@@ -16,4 +16,4 @@ If you are new to lisp I recommend waiting a few weeks until the next quicklisp 
 
 ## License
 
-The license covers everything except the pngs, which are from https://github.com/JoeyDeVries/LearnOpenGL/tree/master/resources/textures
+The license covers everything except the pngs, which are from http://seamless-pixels.blogspot.no/2012/09/free-seamless-ground-textures.html

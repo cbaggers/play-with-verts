@@ -43,7 +43,7 @@
 
 (defvar *samplers* (make-hash-table :test #'equal))
 
-(defun tex (path &optional (force nil))
+(defun tex (path &optional (force nil) (mipmap t))
   (when force
     (let ((s (gethash path *samplers*)))
       (when s
@@ -54,6 +54,9 @@
             (sample
              (dirt:load-image-to-texture
               (asdf:system-relative-pathname
-               :play-with-verts path))))))
+               :play-with-verts path)
+              :rgba8
+              mipmap
+              t)))))
 
 ;;------------------------------------------------------------

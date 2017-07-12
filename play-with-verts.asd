@@ -12,7 +12,6 @@
                (:file "utils")
                (:file "render")
                (:file "assets")
-               (:file "thing")
-               (:file "entities")
+               (:file "things")
                (:file "camera")
                (:file "play-with-verts")))

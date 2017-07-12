@@ -1,6 +1,12 @@
 (in-package #:play-with-verts)
 
 ;;------------------------------------------------------------
+;; Light
+
+(defvar *light-pos* (v! 0 30 -5))
+
+;;------------------------------------------------------------
+;; Things
 
 (defclass thing ()
   ((stream
@@ -16,32 +22,36 @@
    (scale
     :initarg :scale :initform 1f0 :accessor scale)))
 
-(defun get-model->world-space (thing)
+(defvar *things* nil)
+
+(defmethod get-model->world-space ((thing thing))
   (m4:* (m4:translation (pos thing))
         (q:to-mat4 (rot thing))))
 
-;;------------------------------------------------------------
-
-(defun upload-uniforms-for-cam (camera)
-  (map-g #'some-pipeline nil
-         :light-pos *light-pos*
-         :cam-pos (pos camera)
-         :now (now)
-         :world->view (get-world->view-space camera)
-         :view->clip (rtg-math.projection:perspective
-                      (x (viewport-resolution (current-viewport)))
-                      (y (viewport-resolution (current-viewport)))
-                      0.1
-                      200f0
-                      60f0)))
-
-(defun draw-thing (thing)
-  ;; Here we just call our pipeline with all the data, we
-  ;; should really put some of this in our 'thing' objects
+(defmethod draw ((thing thing))
   (map-g #'some-pipeline (buf-stream thing)
          :scale (scale thing)
          :model->world (get-model->world-space thing)
          :albedo (sampler thing)
          :spec-map (specular-sampler thing)))
+
+;;------------------------------------------------------------
+;; Floor
+
+(defclass ground (thing)
+  ((stream :initform (box 40 1 40))
+   (sampler :initform (tex "dirt.jpg"))
+   (scale :initform 0.4)))
+
+(defun make-ground ()
+  (push (make-instance 'ground) *things*))
+
+(defmethod update ((thing ground))
+  (setf (scale thing) 0.4))
+
+;;------------------------------------------------------------
+;; Foo!
+
+
 
 ;;------------------------------------------------------------

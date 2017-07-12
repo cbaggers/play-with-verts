@@ -4,4 +4,4 @@
   ;; Just some number that increases over time that we use
   ;; in a bunch of places
   (/ (float (get-internal-real-time))
-     5000))
+     1000))
