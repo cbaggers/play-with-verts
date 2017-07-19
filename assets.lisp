@@ -35,6 +35,16 @@
           (setf (gethash key *meshes*)
                 (make-buffer-stream vert :index-array index))))))
 
+
+(defun latice (&optional (width 1f0) (height 1f0) (x-seg 512) (y-seg 512))
+  (let ((key (list width height x-seg y-seg)))
+    (or (gethash key *meshes*)
+        (destructuring-bind (vert index)
+            (nineveh.mesh.data.primitives:latice-gpu-arrays
+             :width width :height height :x-segments x-seg :y-segments y-seg)
+          (setf (gethash key *meshes*)
+                (make-buffer-stream vert :index-array index))))))
+
 ;;------------------------------------------------------------
 ;; Textures & Samplers
 ;;

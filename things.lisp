@@ -36,22 +36,17 @@
          :spec-map (specular-sampler thing)))
 
 ;;------------------------------------------------------------
-;; Floor
+;; Terrain
 
-(defclass ground (thing)
-  ((stream :initform (box 40 1 40))
+(defclass terrain (thing)
+  ((stream :initform (latice 512 512 512 512))
    (sampler :initform (tex "dirt.jpg"))
-   (scale :initform 0.4)))
+   (scale :initform 1f0)))
 
-(defun make-ground ()
-  (push (make-instance 'ground) *things*))
+(defun make-terrain ()
+  (push (make-instance 'terrain) *things*))
 
-(defmethod update ((thing ground))
-  (setf (scale thing) 0.4))
-
-;;------------------------------------------------------------
-;; Foo!
-
-
+(defmethod update ((thing terrain))
+  nil)
 
 ;;------------------------------------------------------------
