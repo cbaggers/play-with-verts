@@ -41,12 +41,26 @@
 (defclass terrain (thing)
   ((stream :initform (latice 512 512 512 512))
    (sampler :initform (tex "dirt.jpg"))
-   (scale :initform 1f0)))
+   (scale :initform 1f0)
+   (current-state :initform 0 :accessor current-state)
+   (state-0 :initform (make-terrain-state) :accessor state-0)
+   (state-1 :initform (make-terrain-state) :accessor state-1)))
 
 (defun make-terrain ()
   (push (make-instance 'terrain) *things*))
 
 (defmethod update ((thing terrain))
   nil)
+
+(defmethod draw ((thing terrain))
+  (let ((state
+         (if (= 0 (current-state thing))
+             (state-0 thing)
+             (state-1 thing))))
+    (map-g #'terrain-pipeline (buf-stream thing)
+           :scale (scale thing)
+           :model->world (get-model->world-space thing)
+           :albedo (sampler thing)
+           :height-water-sediment-map (height-water-sediment-map state))))
 
 ;;------------------------------------------------------------

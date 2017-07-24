@@ -12,6 +12,7 @@
                (:file "utils")
                (:file "render")
                (:file "assets")
+               (:file "terrain")
                (:file "things")
                (:file "camera")
                (:file "play-with-verts")))

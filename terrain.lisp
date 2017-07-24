@@ -1,8 +1,5 @@
 (in-package :play-with-verts)
 
-(defvar *terrain-state-0* nil)
-(defvar *terrain-state-1* nil)
-
 (defclass terrain-state ()
   ((height-water-sediment-map
      :initarg :height-water-sediment-map
@@ -12,18 +9,63 @@
     :accessor water-flux-map)
    (water-velocity-map
     :initarg :water-velocity-map
-    :accessor water-velocity-map)))
+    :accessor water-velocity-map)
+   (fbo
+    :initarg :fbo
+    :accessor terrain-fbo)))
 
 (defun make-terrain-state ()
-  (make-instance
-   'terrain-state
-   :height-water-sediment-map
-   (make-texture nil :dimensions '(512 512) :element-type :vec4)
-   :water-flux-map
-   (make-texture nil :dimensions '(512 512) :element-type :vec4)
-   :water-velocity-map
-   (make-texture nil :dimensions '(512 512) :element-type :vec4)))
+  (let ((hws-map
+         (make-texture nil :dimensions '(512 512) :element-type :vec4))
+        (wf-map
+         (make-texture nil :dimensions '(512 512) :element-type :vec4))
+        (wv-map
+         (make-texture nil :dimensions '(512 512) :element-type :vec4)))
+    (make-instance
+     'terrain-state
+     :height-water-sediment-map (sample hws-map)
+     :water-flux-map (sample wf-map)
+     :water-velocity-map (sample wv-map)
+     :fbo (make-fbo (list 0 hws-map) (list 1 wf-map) (list 2 wv-map)))))
 
+;;------------------------------------------------------------
+
+(defun free-terrain-state (terrain-state)
+  (free (terrain-fbo terrain-state))
+  (free (sampler-texture (height-water-sediment-map terrain-state)))
+  (free (height-water-sediment-map terrain-state))
+  (free (sampler-texture (water-flux-map terrain-state)))
+  (free (water-flux-map terrain-state))
+  (free (sampler-texture (water-velocity-map terrain-state)))
+  (free (water-velocity-map terrain-state))
+  nil)
+
+(defmethod free ((terrain-state terrain-state))
+  (free-terrain-state terrain-state))
+
+;;------------------------------------------------------------
+
+(defun-g noise-vert ((vert :vec2))
+  (values (v! vert 0 1) (+ (vec2 0.5) (* 0.5 vert))))
+
+(defun-g noise-frag ((pos :vec2))
+  (values (v! (perlin-noise (* 6 pos)) 0 0 0)
+          (v! 0 0 0 0)
+          (v! 0 0 0 0)))
+
+(defpipeline-g blit-noise-pipeline ()
+  (noise-vert :vec2)
+  (noise-frag :vec2))
+
+(defun blit-noise ()
+  (map-g #'blit-noise-pipeline (get-quad-stream-v2)))
+
+(defun reset-terrain-state (terrain-state)
+  (with-fbo-bound ((terrain-fbo terrain-state))
+    (clear)
+    (blit-noise)))
+
+;;------------------------------------------------------------
 
 ;; • terrain height b
 ;; • water height d

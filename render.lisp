@@ -37,6 +37,87 @@
      world-norm
      uv)))
 
+(defun-g terrain-vert-stage ((vert g-pnt)
+                             &uniform (now :float)
+                             (scale :float)
+                             (model->world :mat4)
+                             (world->view :mat4)
+                             (view->clip :mat4)
+                             (height-water-sediment-map :sampler-2d))
+  (let* (;; Unpack the data from our vert
+         ;; (pos & normal are in model space)
+         (pos (* (pos vert) scale))
+         (normal (norm vert))
+         (uv (tex vert))
+
+         ;; Unpack data from height-water-sediment-map
+         (height (* 20 (x (texture height-water-sediment-map uv))))
+         (pos (+ pos (v! 0 height 0)))
+
+         ;; model space to world space.
+         ;; We don't want to translate the normal, so we
+         ;; turn the mat4 to a mat3
+         (model-pos (v! pos 1))
+         (world-pos (* model->world model-pos))
+         (world-norm (* (m4:to-mat3 model->world)
+                        normal))
+
+         ;; world space to view space
+         (view-pos (* world->view world-pos))
+
+         ;; view space to clip space
+         (clip-pos (* view->clip view-pos)))
+
+    ;; return the clip-space position and the 3 other values
+    ;; that will be passed to the fragment shader
+    (values
+     clip-pos
+     uv)))
+
+(defun-g terrain-geom-stage ((uvs (:vec2 3))
+                             &uniform (height-water-sediment-map :sampler-2d))
+  (declare (output-primitive :kind :triangle-strip :max-vertices 6))
+  ;;
+  (emit ()
+        (gl-position (aref gl-in 0))
+        (* 0.5 (aref uvs 0)))
+  (emit ()
+        (gl-position (aref gl-in 1))
+        (* 0.5 (aref uvs 1)))
+  (emit ()
+        (gl-position (aref gl-in 2))
+        (* 0.5 (aref uvs 2)))
+  (end-primitive)
+  ;;
+  (let* ((whs (texture height-water-sediment-map (aref uvs 0)))
+         (height (* 20 (y whs))))
+    (emit ()
+          (+ (gl-position (aref gl-in 0)) (v! 0 height 0 0))
+          (+ (vec2 0.5) (* 0.5 (aref uvs 0)))))
+
+  (let* ((whs (texture height-water-sediment-map (aref uvs 1)))
+         (height (* 20 (y whs))))
+    (emit ()
+          (+ (gl-position (aref gl-in 1)) (v! 0 height 0 0))
+          (+ (vec2 0.5) (* 0.5 (aref uvs 1)))))
+
+  (let* ((whs (texture height-water-sediment-map (aref uvs 2)))
+         (height (* 20 (y whs))))
+    (emit ()
+          (+ (gl-position (aref gl-in 2)) (v! 0 height 0 0))
+          (+ (vec2 0.5) (* 0.5 (aref uvs 2)))))
+  (end-primitive)
+  ;;
+  (values))
+
+(defun-g terrain-frag-stage ((uv :vec2)
+                             &uniform
+                             (albedo :sampler-2d)
+                             (height-water-sediment-map :sampler-2d))
+  (let* ((object-color (texture albedo uv))
+         (ambient 0.3))
+    (* object-color ambient)))
+
 ;; We will use this function as our fragment shader
 (defun-g some-frag-stage ((frag-pos :vec3)
                           (frag-normal :vec3)
@@ -90,6 +171,11 @@
   (some-vert-stage g-pnt)
   (some-frag-stage :vec3 :vec3 :vec2))
 
+(defpipeline-g terrain-pipeline ()
+  :vertex (terrain-vert-stage g-pnt)
+  :geometry (terrain-geom-stage (:vec2 3))
+  :fragment (terrain-frag-stage :vec2))
+
 ;;------------------------------------------------------------
 
 (defun upload-uniforms-for-cam (camera)
@@ -102,7 +188,16 @@
                       (x (viewport-resolution (current-viewport)))
                       (y (viewport-resolution (current-viewport)))
                       0.1
-                      200f0
+                      400f0
+                      60f0))
+  (map-g #'terrain-pipeline nil
+         :now (now)
+         :world->view (get-world->view-space camera)
+         :view->clip (rtg-math.projection:perspective
+                      (x (viewport-resolution (current-viewport)))
+                      (y (viewport-resolution (current-viewport)))
+                      0.1
+                      400f0
                       60f0)))
 
 ;;------------------------------------------------------------

@@ -7,7 +7,7 @@
 
 (defun reset ()
   (setf *things* nil)
-  (make-ground))
+  (make-terrain))
 
 (defun game-step ()
   (let* ((now (get-internal-real-time))
