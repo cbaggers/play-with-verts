@@ -40,7 +40,7 @@
 
 (defclass terrain (thing)
   ((stream :initform (latice 512 512 512 512))
-   (sampler :initform (tex "dirt.jpg"))
+   (sampler :initform (tex "dirt-and-water.png"))
    (scale :initform 1f0)
    (current-state :initform 0 :accessor current-state)
    (state-0 :initform (make-terrain-state) :accessor state-0)
@@ -50,7 +50,7 @@
   (push (make-instance 'terrain) *things*))
 
 (defmethod update ((thing terrain))
-  nil)
+  (erode (first *things*) *delta*))
 
 (defmethod draw ((thing terrain))
   (let ((state

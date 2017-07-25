@@ -92,19 +92,19 @@
   (let* ((whs (texture height-water-sediment-map (aref uvs 0)))
          (height (* 20 (y whs))))
     (emit ()
-          (+ (gl-position (aref gl-in 0)) (v! 0 height 0 0))
+          (+ (gl-position (aref gl-in 0)) (v! 0 (- height 0.01) 0 0))
           (+ (vec2 0.5) (* 0.5 (aref uvs 0)))))
 
   (let* ((whs (texture height-water-sediment-map (aref uvs 1)))
          (height (* 20 (y whs))))
     (emit ()
-          (+ (gl-position (aref gl-in 1)) (v! 0 height 0 0))
+          (+ (gl-position (aref gl-in 1)) (v! 0 (- height 0.01) 0 0))
           (+ (vec2 0.5) (* 0.5 (aref uvs 1)))))
 
   (let* ((whs (texture height-water-sediment-map (aref uvs 2)))
          (height (* 20 (y whs))))
     (emit ()
-          (+ (gl-position (aref gl-in 2)) (v! 0 height 0 0))
+          (+ (gl-position (aref gl-in 2)) (v! 0 (- height 0.01) 0 0))
           (+ (vec2 0.5) (* 0.5 (aref uvs 2)))))
   (end-primitive)
   ;;

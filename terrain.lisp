@@ -45,7 +45,7 @@
 
 ;;------------------------------------------------------------
 
-(defun-g noise-vert ((vert :vec2))
+(defun-g quad-vert ((vert :vec2))
   (values (v! vert 0 1) (+ (vec2 0.5) (* 0.5 vert))))
 
 (defun-g noise-frag ((pos :vec2))
@@ -54,7 +54,7 @@
           (v! 0 0 0 0)))
 
 (defpipeline-g blit-noise-pipeline ()
-  (noise-vert :vec2)
+  (quad-vert :vec2)
   (noise-frag :vec2))
 
 (defun blit-noise ()
@@ -195,13 +195,33 @@
                                      height-water-sediment-map
                                      flux-map))
          (new-flux (v! new-flux-l new-flux-r new-flux-t new-flux-b))
-         (new-flux (v! (* (k-factor time-delta new-flux water-height))
-                       (* (k-factor time-delta new-flux water-height))
-                       (* (k-factor time-delta new-flux water-height))
-                       (* (k-factor time-delta new-flux water-height)))))
-    (values (v! terrain-height water-plus-rain sediment-amount)
+         (k (k-factor time-delta new-flux water-height))
+         (new-flux (v! (* k new-flux-l)
+                       (* k new-flux-r)
+                       (* k new-flux-t)
+                       (* k new-flux-b))))
+    (values (v! terrain-height water-plus-rain sediment-amount 0.0)
             new-flux)))
 
+(defpipeline-g erosion-0 ()
+  (quad-vert :vec2)
+  (erosion-step-0 :vec2))
+
+(defun blit-erosion-0 (src-state time-delta)
+  (map-g #'erosion-0 (get-quad-stream-v2)
+         :time-delta time-delta
+         :tex-size 512.0
+         :height-water-sediment-map (height-water-sediment-map src-state)
+         :flux-map (water-flux-map src-state)))
+
+(defun erode (terrain time-delta)
+  (cepl-utils:with-setf (depth-test-function *cepl-context*) nil
+    (with-fbo-bound ((terrain-fbo (state-1 terrain)))
+      (clear)
+      (blit-erosion-0 (state-0 terrain) time-delta))
+    (with-fbo-bound ((terrain-fbo (state-0 terrain)))
+      (clear)
+      (blit-erosion-0 (state-1 terrain) time-delta))))
 
 (defun-g calc-water-delta ((flux :vec4)
                            (flux-at-l :vec4)
