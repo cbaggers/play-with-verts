@@ -49,8 +49,8 @@
 (defun make-terrain ()
   (push (make-instance 'terrain) *things*))
 
-(defmethod update ((thing terrain))
-  (erode (first *things*) *delta*))
+(defmethod update ((thing terrain) time-delta)
+  (erode (first *things*) time-delta))
 
 (defmethod draw ((thing terrain))
   (let ((state

@@ -30,7 +30,7 @@
   (upload-uniforms-for-cam *camera*)
 
   (loop :for thing :in *things* :do
-     (update thing)
+     (update thing *delta*)
      (draw thing))
 
   ;; display what we have drawn
