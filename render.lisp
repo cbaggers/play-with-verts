@@ -51,16 +51,12 @@
          (uv (tex vert))
 
          ;; Unpack data from height-water-sediment-map
-         (height (* 20 (x (texture height-water-sediment-map uv))))
+         (height (x (texture height-water-sediment-map uv)))
          (pos (+ pos (v! 0 height 0)))
 
-         ;; model space to world space.
-         ;; We don't want to translate the normal, so we
-         ;; turn the mat4 to a mat3
+         ;; model space to world space
          (model-pos (v! pos 1))
          (world-pos (* model->world model-pos))
-         (world-norm (* (m4:to-mat3 model->world)
-                        normal))
 
          ;; world space to view space
          (view-pos (* world->view world-pos))
@@ -68,8 +64,6 @@
          ;; view space to clip space
          (clip-pos (* view->clip view-pos)))
 
-    ;; return the clip-space position and the 3 other values
-    ;; that will be passed to the fragment shader
     (values
      clip-pos
      uv)))
@@ -78,37 +72,45 @@
                              &uniform (height-water-sediment-map :sampler-2d))
   (declare (output-primitive :kind :triangle-strip :max-vertices 6))
   ;;
-  (emit ()
-        (gl-position (aref gl-in 0))
-        (* 0.5 (aref uvs 0)))
-  (emit ()
-        (gl-position (aref gl-in 1))
-        (* 0.5 (aref uvs 1)))
-  (emit ()
-        (gl-position (aref gl-in 2))
-        (* 0.5 (aref uvs 2)))
-  (end-primitive)
-  ;;
-  (let* ((whs (texture height-water-sediment-map (aref uvs 0)))
-         (height (* 20 (y whs))))
+  ;; re-emit the terrain mesh
+  (let ((terrain-pos-0 (gl-position (aref gl-in 0)))
+        (terrain-pos-1 (gl-position (aref gl-in 1)))
+        (terrain-pos-2 (gl-position (aref gl-in 2)))
+        (tex-uv-0 (* (v! 0.5 1) (aref uvs 0)))
+        (tex-uv-1 (* (v! 0.5 1) (aref uvs 1)))
+        (tex-uv-2 (* (v! 0.5 1) (aref uvs 2))))
     (emit ()
-          (+ (gl-position (aref gl-in 0)) (v! 0 (- height 0.01) 0 0))
-          (+ (vec2 0.5) (* 0.5 (aref uvs 0)))))
+          terrain-pos-0
+          tex-uv-0)
+    (emit ()
+          terrain-pos-1
+          tex-uv-1)
+    (emit ()
+          terrain-pos-2
+          tex-uv-2)
+    (end-primitive)
+    ;;
+    ;; emit the water mesh
+    (let* ((whs (texture height-water-sediment-map (aref uvs 0)))
+           (water-height (y whs)))
+      (emit ()
+            (+ terrain-pos-0 (v! 0 (- water-height 0.01) 0 0))
+            (+ (v! 0.5 0) tex-uv-0)))
 
-  (let* ((whs (texture height-water-sediment-map (aref uvs 1)))
-         (height (* 20 (y whs))))
-    (emit ()
-          (+ (gl-position (aref gl-in 1)) (v! 0 (- height 0.01) 0 0))
-          (+ (vec2 0.5) (* 0.5 (aref uvs 1)))))
+    (let* ((whs (texture height-water-sediment-map (aref uvs 1)))
+           (water-height (y whs)))
+      (emit ()
+            (+ terrain-pos-1 (v! 0 (- water-height 0.01) 0 0))
+            (+ (v! 0.5 0) tex-uv-1)))
 
-  (let* ((whs (texture height-water-sediment-map (aref uvs 2)))
-         (height (* 20 (y whs))))
-    (emit ()
-          (+ (gl-position (aref gl-in 2)) (v! 0 (- height 0.01) 0 0))
-          (+ (vec2 0.5) (* 0.5 (aref uvs 2)))))
-  (end-primitive)
-  ;;
-  (values))
+    (let* ((whs (texture height-water-sediment-map (aref uvs 2)))
+           (water-height (y whs)))
+      (emit ()
+            (+ terrain-pos-2 (v! 0 (- water-height 0.01) 0 0))
+            (+ (v! 0.5 0) tex-uv-2)))
+    (end-primitive)
+    ;;
+    (values)))
 
 (defun-g terrain-frag-stage ((uv :vec2)
                              &uniform

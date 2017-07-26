@@ -46,10 +46,11 @@
 ;;------------------------------------------------------------
 
 (defun-g quad-vert ((vert :vec2))
-  (values (v! vert 0 1) (+ (vec2 0.5) (* 0.5 vert))))
+  (values (v! vert 0 1)
+          (+ (vec2 0.5) (* 0.5 vert))))
 
-(defun-g noise-frag ((pos :vec2))
-  (values (v! (perlin-noise (* 6 pos)) 0 0 0)
+(defun-g noise-frag ((uv :vec2))
+  (values (v! (* 20 (perlin-noise (* 6 uv))) 0 0 0)
           (v! 0 0 0 0)
           (v! 0 0 0 0)))
 
@@ -154,10 +155,10 @@
          ;;
          ;; data
          (data (texture height-water-sediment-map uv))
-         (data-l (texture height-water-sediment-map uv-l))
-         (data-r (texture height-water-sediment-map uv-r))
-         (data-t (texture height-water-sediment-map uv-t))
-         (data-b (texture height-water-sediment-map uv-b))
+         (data-at-l (texture height-water-sediment-map uv-l))
+         (data-at-r (texture height-water-sediment-map uv-r))
+         (data-at-t (texture height-water-sediment-map uv-t))
+         (data-at-b (texture height-water-sediment-map uv-b))
          (flux (texture flux-map uv))
          (flux-l (x flux))
          (flux-r (y flux))
@@ -174,22 +175,22 @@
          (water-plus-rain (add-rain water-height rain time-delta))
          ;;
          ;; flux
-         (new-flux-l (flux-to-offset data-l flux-l time-delta
+         (new-flux-l (flux-to-offset data-at-l flux-l time-delta
                                      terrain-height
                                      water-height
                                      height-water-sediment-map
                                      flux-map))
-         (new-flux-r (flux-to-offset data-r flux-r time-delta
+         (new-flux-r (flux-to-offset data-at-r flux-r time-delta
                                      terrain-height
                                      water-height
                                      height-water-sediment-map
                                      flux-map))
-         (new-flux-t (flux-to-offset data-t flux-t time-delta
+         (new-flux-t (flux-to-offset data-at-t flux-t time-delta
                                      terrain-height
                                      water-height
                                      height-water-sediment-map
                                      flux-map))
-         (new-flux-b (flux-to-offset data-b flux-b time-delta
+         (new-flux-b (flux-to-offset data-at-b flux-b time-delta
                                      terrain-height
                                      water-height
                                      height-water-sediment-map
@@ -265,10 +266,10 @@
          ;;
          ;; data
          (data (texture height-water-sediment-map uv))
-         (data-l (texture height-water-sediment-map uv-l))
-         (data-r (texture height-water-sediment-map uv-r))
-         (data-t (texture height-water-sediment-map uv-t))
-         (data-b (texture height-water-sediment-map uv-b))
+         (data-at-l (texture height-water-sediment-map uv-l))
+         (data-at-r (texture height-water-sediment-map uv-r))
+         (data-at-t (texture height-water-sediment-map uv-t))
+         (data-at-b (texture height-water-sediment-map uv-b))
          (flux (texture flux-map uv))
          (flux-at-l (texture flux-map uv-l))
          (flux-at-r (texture flux-map uv-r))
