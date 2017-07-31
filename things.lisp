@@ -61,6 +61,7 @@
            :scale (scale thing)
            :model->world (get-model->world-space thing)
            :albedo (sampler thing)
-           :height-water-sediment-map (height-water-sediment-map state))))
+           :height-water-sediment-map (height-water-sediment-map state))
+    (draw-tex-bl (height-water-sediment-map state))))
 
 ;;------------------------------------------------------------

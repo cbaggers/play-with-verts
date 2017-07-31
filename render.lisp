@@ -47,7 +47,6 @@
   (let* (;; Unpack the data from our vert
          ;; (pos & normal are in model space)
          (pos (* (pos vert) scale))
-         (normal (norm vert))
          (uv (tex vert))
 
          ;; Unpack data from height-water-sediment-map
@@ -91,20 +90,20 @@
     (end-primitive)
     ;;
     ;; emit the water mesh
-    (let* ((whs (texture height-water-sediment-map (aref uvs 0)))
-           (water-height (y whs)))
+    (let* ((hws (texture height-water-sediment-map (aref uvs 0)))
+           (water-height (y hws)))
       (emit ()
             (+ terrain-pos-0 (v! 0 (- water-height 0.01) 0 0))
             (+ (v! 0.5 0) tex-uv-0)))
 
-    (let* ((whs (texture height-water-sediment-map (aref uvs 1)))
-           (water-height (y whs)))
+    (let* ((hws (texture height-water-sediment-map (aref uvs 1)))
+           (water-height (y hws)))
       (emit ()
             (+ terrain-pos-1 (v! 0 (- water-height 0.01) 0 0))
             (+ (v! 0.5 0) tex-uv-1)))
 
-    (let* ((whs (texture height-water-sediment-map (aref uvs 2)))
-           (water-height (y whs)))
+    (let* ((hws (texture height-water-sediment-map (aref uvs 2)))
+           (water-height (y hws)))
       (emit ()
             (+ terrain-pos-2 (v! 0 (- water-height 0.01) 0 0))
             (+ (v! 0.5 0) tex-uv-2)))
@@ -117,7 +116,7 @@
                              (albedo :sampler-2d)
                              (height-water-sediment-map :sampler-2d))
   (let* ((object-color (texture albedo uv))
-         (ambient 0.3))
+         (ambient 0.4))
     (* object-color ambient)))
 
 ;; We will use this function as our fragment shader
