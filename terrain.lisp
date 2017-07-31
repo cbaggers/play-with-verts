@@ -195,7 +195,8 @@
                                      water-height
                                      height-water-sediment-map
                                      flux-map))
-         (new-flux (v! new-flux-l new-flux-r new-flux-t new-flux-b))
+         (new-flux ;;(v! new-flux-l new-flux-r new-flux-t new-flux-b)
+          (v! 0 0 0 0))
          (k (k-factor time-delta new-flux water-height))
          (new-flux (v! (* k new-flux-l)
                        (* k new-flux-r)
@@ -385,12 +386,17 @@
          :height-water-sediment-map (height-water-sediment-map src-state)
          :flux-map (water-flux-map src-state)))
 
+(defun swap-state (terrain)
+  (rotatef (state-0 terrain) (state-1 terrain)))
 
 (defun erode (terrain time-delta)
-  (cepl-utils:with-setf (depth-test-function *cepl-context*) nil
+  (with-setf (depth-test-function *cepl-context*) nil
     (with-fbo-bound ((terrain-fbo (state-1 terrain)))
       (clear)
       (blit-erosion-0 (state-0 terrain) time-delta))
-    (with-fbo-bound ((terrain-fbo (state-0 terrain)))
-      (clear)
-      (blit-erosion-1 (state-1 terrain) time-delta))))
+    (swap-state terrain)
+    ;; (with-fbo-bound ((terrain-fbo (state-1 terrain)))
+    ;;   (clear)
+    ;;   (blit-erosion-1 (state-0 terrain) time-delta))
+    ;; (swap-state terrain)
+    ))

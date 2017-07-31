@@ -9,6 +9,10 @@
   (setf *things* nil)
   (make-terrain))
 
+(defun init ()
+  (unless *things*
+    (reset)))
+
 (defun game-step ()
   (let* ((now (get-internal-real-time))
          (delta (* (- now *last-time*) 0.001))
@@ -30,7 +34,8 @@
   (upload-uniforms-for-cam *camera*)
 
   (loop :for thing :in *things* :do
-     (update thing *delta*)
+     (update thing ;;*delta*
+             0.01)
      (draw thing))
 
   ;; display what we have drawn
@@ -38,7 +43,7 @@
   (decay-events))
 
 
-(def-simple-main-loop play (:on-start #'reset)
+(def-simple-main-loop play (:on-start #'init)
   (game-step))
 
 
