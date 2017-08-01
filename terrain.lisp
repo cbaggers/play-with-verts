@@ -50,7 +50,7 @@
           (+ (vec2 0.5) (* 0.5 vert))))
 
 (defun-g noise-frag ((uv :vec2))
-  (values (v! (* 20 (perlin-noise (* 6 uv))) 10 0 0)
+  (values (v! (* 20 (perlin-noise (* 6 uv))) 0 0 0)
           (v! 0 0 0 0)
           (v! 0 0 0 0)))
 
@@ -61,8 +61,11 @@
 (defun blit-noise ()
   (map-g #'blit-noise-pipeline (get-quad-stream-v2)))
 
-(defun reset-terrain-state (terrain-state)
-  (with-fbo-bound ((terrain-fbo terrain-state))
+(defun reset-terrain-state (terrain)
+  (with-fbo-bound ((terrain-fbo (state-0 terrain)))
+    (clear)
+    (blit-noise))
+  (with-fbo-bound ((terrain-fbo (state-1 terrain)))
     (clear)
     (blit-noise)))
 
@@ -90,7 +93,7 @@
 ;; Ki  Talus angle tangent bias  [0; 1]  0.1
 
 (defun-g rain ((pos :vec2))
-  1)
+  0.1)
 
 ;; d1(x, y) = dt(x, y) + ∆t · rt(x, y) · Kr
 
@@ -133,12 +136,12 @@
                     *virtual-pipe-length*))))))
 
 (defun-g total-outflow ((flux :vec4) (time-delta :float))
-  (* time-delta (abs (+ (x flux) (y flux) (z flux) (w flux)))))
+  (* time-delta (+ (x flux) (y flux) (z flux) (w flux))))
 
 (defun-g k-factor ((time-delta :float)
                    (flux :vec4)
                    (water-height :float))
-  (max 1 (/ (* water-height
+  (min 1 (/ (* water-height
                *virtual-pipe-length*
                *virtual-pipe-length*)
             (total-outflow flux time-delta))))
@@ -190,7 +193,7 @@
                                 *virtual-pipe-length*)))
 
     (when (> (total-outflow new-flux time-delta) local-water-volume)
-      (setf new-flux (* new-flux (k-factor time-delta new-flux water-height))))
+      (setf new-flux (* new-flux (k-factor 0.01 new-flux 0))))
 
     (values (v! terrain-height water-plus-rain sediment-amount 0.0)
             new-flux
@@ -363,7 +366,7 @@
                   current-sediment
                   0.0)
               flux
-              (v! 0 0 0 0)))))
+              (v! velocity-2d 0 0)))))
 
 (defpipeline-g erosion-1 ()
   (quad-vert :vec2)
@@ -385,8 +388,8 @@
       (clear)
       (blit-erosion-0 (state-0 terrain) time-delta))
     (swap-state terrain)
-    ;; (with-fbo-bound ((terrain-fbo (state-1 terrain)))
-    ;;   (clear)
-    ;;   (blit-erosion-1 (state-0 terrain) time-delta))
-    ;; (swap-state terrain)
+    (with-fbo-bound ((terrain-fbo (state-1 terrain)))
+      (clear)
+      (blit-erosion-1 (state-0 terrain) time-delta))
+    (swap-state terrain)
     ))

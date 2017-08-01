@@ -63,7 +63,9 @@
 (defun draw-state-dbg (terrain)
   (let ((state (state-0 terrain)))
     (draw-tex-bl (height-water-sediment-map state))
-    (draw-tex-br (water-flux-map state))))
+    (draw-tex-br (water-flux-map state))
+    ;;(draw-tex-tr (water-velocity-map state))
+    ))
 
 (defun draw-dbg ()
   (as-frame

@@ -93,19 +93,19 @@
     (let* ((hws (texture height-water-sediment-map (aref uvs 0)))
            (water-height (y hws)))
       (emit ()
-            (+ terrain-pos-0 (v! 0 (- water-height 0.01) 0 0))
+            (+ terrain-pos-0 (v! 0 (- water-height 0.001) 0 0))
             (+ (v! 0.5 0) tex-uv-0)))
 
     (let* ((hws (texture height-water-sediment-map (aref uvs 1)))
            (water-height (y hws)))
       (emit ()
-            (+ terrain-pos-1 (v! 0 (- water-height 0.01) 0 0))
+            (+ terrain-pos-1 (v! 0 (- water-height 0.001) 0 0))
             (+ (v! 0.5 0) tex-uv-1)))
 
     (let* ((hws (texture height-water-sediment-map (aref uvs 2)))
            (water-height (y hws)))
       (emit ()
-            (+ terrain-pos-2 (v! 0 (- water-height 0.01) 0 0))
+            (+ terrain-pos-2 (v! 0 (- water-height 0.001) 0 0))
             (+ (v! 0.5 0) tex-uv-2)))
     (end-primitive)
     ;;
