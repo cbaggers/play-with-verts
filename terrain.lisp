@@ -309,10 +309,10 @@
                          (height-water-sediment-map :sampler-2d)
                          (flux-map :sampler-2d))
   (let* ((tex-step (/ 1.0 tex-size))
-         (uv-l (+ uv (v! (- tex-size) 0)))
-         (uv-r (+ uv (v! tex-size 0)))
-         (uv-t (+ uv (v! 0 tex-size)))
-         (uv-b (+ uv (v! 0 (- tex-size))))
+         (uv-l (+ uv (v! (- tex-step) 0)))
+         (uv-r (+ uv (v! tex-step 0)))
+         (uv-t (+ uv (v! 0 tex-step)))
+         (uv-b (+ uv (v! 0 (- tex-step))))
          ;;
          ;; data
          (data (texture height-water-sediment-map uv))
