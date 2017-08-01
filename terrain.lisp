@@ -119,9 +119,7 @@
                          (offset-flux :float)
                          (time-delta :float)
                          (pos-terrain-height :float)
-                         (pos-water-height :float)
-                         (height-water-sediment-map :sampler-2d)
-                         (water-flux-map :sampler-2d))
+                         (pos-water-height :float))
   (let* ((offset-terrain-height (x offset-data))
          (offset-water-height (y offset-data)))
     (max 0 (+ offset-flux
@@ -134,14 +132,16 @@
                                     offset-water-height))
                     *virtual-pipe-length*))))))
 
+(defun-g total-outflow ((flux :vec4) (time-delta :float))
+  (* time-delta (abs (+ (x flux) (y flux) (z flux) (w flux)))))
+
 (defun-g k-factor ((time-delta :float)
                    (flux :vec4)
                    (water-height :float))
   (max 1 (/ (* water-height
                *virtual-pipe-length*
                *virtual-pipe-length*)
-            (* time-delta
-               (+ (x flux) (y flux) (z flux) (w flux))))))
+            (total-outflow flux time-delta))))
 
 (defun-g erosion-step-0 ((uv :vec2)
                           &uniform (time-delta :float) (tex-size :float)
@@ -176,32 +176,22 @@
          ;;
          ;; flux
          (new-flux-l (flux-to-offset data-at-l flux-l time-delta
-                                     terrain-height
-                                     water-height
-                                     height-water-sediment-map
-                                     flux-map))
+                                     terrain-height water-height))
          (new-flux-r (flux-to-offset data-at-r flux-r time-delta
-                                     terrain-height
-                                     water-height
-                                     height-water-sediment-map
-                                     flux-map))
+                                     terrain-height water-height))
          (new-flux-t (flux-to-offset data-at-t flux-t time-delta
-                                     terrain-height
-                                     water-height
-                                     height-water-sediment-map
-                                     flux-map))
+                                     terrain-height water-height))
          (new-flux-b (flux-to-offset data-at-b flux-b time-delta
-                                     terrain-height
-                                     water-height
-                                     height-water-sediment-map
-                                     flux-map))
-         (new-flux ;;(v! new-flux-l new-flux-r new-flux-t new-flux-b)
-          (v! 0 0 0 0))
-         (k (k-factor time-delta new-flux water-height))
-         (new-flux (v! (* k new-flux-l)
-                       (* k new-flux-r)
-                       (* k new-flux-t)
-                       (* k new-flux-b))))
+                                     terrain-height water-height))
+         (new-flux (v! new-flux-l new-flux-r new-flux-t new-flux-b))
+
+         (local-water-volume (* water-height
+                                *virtual-pipe-length*
+                                *virtual-pipe-length*)))
+
+    (when (> (total-outflow new-flux time-delta) local-water-volume)
+      (setf new-flux (* new-flux (k-factor time-delta new-flux water-height))))
+
     (values (v! terrain-height water-plus-rain sediment-amount 0.0)
             new-flux
             (v! 0 0 0 0))))
