@@ -38,6 +38,8 @@
 ;;------------------------------------------------------------
 ;; Terrain
 
+(defvar *terrain* nil)
+
 (defclass terrain (thing)
   ((stream :initform (latice 512 512 512 512))
    (sampler :initform (tex "dirt-and-water.png"))
@@ -46,7 +48,9 @@
    (state-1 :initform (make-terrain-state) :accessor state-1)))
 
 (defun make-terrain ()
-  (push (make-instance 'terrain) *things*))
+  (let ((terrain (make-instance 'terrain)))
+    (setf *terrain* terrain)
+    (push terrain *things*)))
 
 (defmethod update ((thing terrain) time-delta)
   (erode (first *things*) time-delta))
