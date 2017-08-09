@@ -13,6 +13,7 @@
                (:file "utils")
                (:file "render")
                (:file "assets")
+               (:file "terrain-data")
                (:file "terrain")
                (:file "things")
                (:file "camera")

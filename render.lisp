@@ -189,7 +189,7 @@
                       (x (viewport-resolution (current-viewport)))
                       (y (viewport-resolution (current-viewport)))
                       0.1
-                      400f0
+                      800f0
                       60f0))
   (map-g #'terrain-pipeline nil
          :now (now)
@@ -198,7 +198,7 @@
                       (x (viewport-resolution (current-viewport)))
                       (y (viewport-resolution (current-viewport)))
                       0.1
-                      400f0
+                      800f0
                       60f0)))
 
 ;;------------------------------------------------------------

@@ -1,93 +1,5 @@
 (in-package :play-with-verts)
 
-(defclass terrain-state ()
-  ((height-water-sediment-map
-     :initarg :height-water-sediment-map
-     :accessor height-water-sediment-map)
-   (water-flux-map
-    :initarg :water-flux-map
-    :accessor water-flux-map)
-   (water-velocity-map
-    :initarg :water-velocity-map
-    :accessor water-velocity-map)
-   (thermal-map-0
-    :initarg :thermal-map-0
-    :accessor thermal-map-0)
-   (thermal-map-1
-    :initarg :thermal-map-1
-    :accessor thermal-map-1)
-   (fbo
-    :initarg :fbo
-    :accessor terrain-fbo)))
-
-(defun make-terrain-state ()
-  (let ((hws-map
-         (make-texture nil :dimensions '(512 512) :element-type :vec4))
-        (wf-map
-         (make-texture nil :dimensions '(512 512) :element-type :vec4))
-        (wv-map
-         (make-texture nil :dimensions '(512 512) :element-type :vec4))
-        (t0-map
-         (make-texture nil :dimensions '(512 512) :element-type :vec4))
-        (t1-map
-         (make-texture nil :dimensions '(512 512) :element-type :vec4)))
-    (make-instance
-     'terrain-state
-     :height-water-sediment-map (sample hws-map)
-     :water-flux-map (sample wf-map)
-     :water-velocity-map (sample wv-map)
-     :thermal-map-0 (sample t0-map)
-     :thermal-map-1 (sample t1-map)
-     :fbo (make-fbo (list 0 hws-map) (list 1 wf-map) (list 2 wv-map)
-                    (list 3 t0-map) (list 4 t1-map)))))
-
-;;------------------------------------------------------------
-
-(defun free-terrain-state (terrain-state)
-  (free (terrain-fbo terrain-state))
-  (free (sampler-texture (height-water-sediment-map terrain-state)))
-  (free (height-water-sediment-map terrain-state))
-  (free (sampler-texture (water-flux-map terrain-state)))
-  (free (water-flux-map terrain-state))
-  (free (sampler-texture (water-velocity-map terrain-state)))
-  (free (water-velocity-map terrain-state))
-  (free (sampler-texture (thermal-map-0 terrain-state)))
-  (free (thermal-map-0 terrain-state))
-  (free (sampler-texture (thermal-map-1 terrain-state)))
-  (free (thermal-map-1 terrain-state))
-  nil)
-
-(defmethod free ((terrain-state terrain-state))
-  (free-terrain-state terrain-state))
-
-;;------------------------------------------------------------
-
-(defun-g quad-vert ((vert :vec2))
-  (values (v! vert 0 1)
-          (+ (vec2 0.5) (* 0.5 vert))))
-
-(defun-g noise-frag ((uv :vec2))
-  (values (v! (* 20 (perlin-noise (* 6 uv))) 0 0 0)
-          (v! 0 0 0 0)
-          (v! 0 0 0 0)
-          (v! 0 0 0 0)
-          (v! 0 0 0 0)))
-
-(defpipeline-g blit-noise-pipeline ()
-  (quad-vert :vec2)
-  (noise-frag :vec2))
-
-(defun blit-noise ()
-  (map-g #'blit-noise-pipeline (get-quad-stream-v2)))
-
-(defun reset-terrain-state (terrain)
-  (with-fbo-bound ((terrain-fbo (state-0 terrain)))
-    (clear)
-    (blit-noise))
-  (with-fbo-bound ((terrain-fbo (state-1 terrain)))
-    (clear)
-    (blit-noise)))
-
 ;;------------------------------------------------------------
 
 ;; • terrain height b
@@ -132,9 +44,12 @@
                       (pos-water-height :float)
                       (offset-terrain-height :float)
                       (offset-water-height :float))
+  ;; negative if neighbours height is lower
+  ;; I use this as it feels right.
   (- (+ offset-terrain-height offset-water-height)
      (+ pos-terrain-height pos-water-height)))
 
+;; positive as is the magnitude, not the velocity (no direction specified)
 (defvar *gravity* 9.81)
 
 (defun-g flux-to-offset ((offset-data :vec4)
@@ -148,18 +63,25 @@
               (* time-delta
                  *virtual-pipe-area*
                  (/ (* *gravity*
-                       (height-diff pos-terrain-height
-                                    pos-water-height
-                                    offset-terrain-height
-                                    offset-water-height))
+                       ;; negate the height diff as we want
+                       ;; positive values for outflow
+                       (- (height-diff pos-terrain-height
+                                       pos-water-height
+                                       offset-terrain-height
+                                       offset-water-height)))
                     *virtual-pipe-length*))))))
 
 (defun-g total-outflow ((flux :vec4) (time-delta :float))
+  ;; flux will always be positive
   (* time-delta (+ (x flux) (y flux) (z flux) (w flux))))
 
 (defun-g k-factor ((time-delta :float)
                    (flux :vec4)
                    (water-height :float))
+  ;; paper said max 1, but the k-factor was to scale down the
+  ;; flux when it was greater than the water-height.
+  ;; Given that 'the outflow flux is mutlipled by K' we need
+  ;; it to be in the 0..1 range to not make the issue greater
   (min 1 (/ (* water-height
                *virtual-pipe-length*
                *virtual-pipe-length*)
@@ -172,11 +94,17 @@
 
 ;; Let’s denote the distance between two cells by d and
 ;; talus angle by α = tan((b − bi )/d).
+;;
+;; ..hmm.. the tan is what is says in the paper, but it seems weird
+;; as tan will tend to infinity for certain height differences. It
+;; seems like this is a usage of tan(angle) = oposite/adjacent, but
+;; then the angle is atan(oposite/adjacent)
 
 (defun-g talus-angle ((height :float)
                       (offset-height :float))
-  (tan (/ (- height offset-height)
-          *virtual-pipe-length*)))
+  ;; not the same as paper, see above
+  (atan (/ (- height offset-height)
+           *virtual-pipe-length*)))
 
 ;; Let’s denote the set
 ;; of neighbors that are lying lower than the current element
@@ -186,26 +114,28 @@
 (defvar *talus-angle-tangent-coeff* 0.8) ;; ka
 (defvar *talus-angle-tangent-bias* 0.1) ;; ki
 
+;;
+;; hmm the logic for 'under the talus angle' is odd
 (defun-g in-thermal-set ((terrain-height :float)
                          (offset-height :float))
   (and (< (- terrain-height offset-height) 0)
-       (> (tan (talus-angle terrain-height offset-height))
-          (* (local-hardness)
+       (< (* (local-hardness)
              (+ *talus-angle-tangent-coeff*
-                *talus-angle-tangent-bias*)))))
+                *talus-angle-tangent-bias*))
+          (talus-angle terrain-height offset-height))))
 
 (defun-g thermal-height ((terrain-height :float)
                          (offset-height :float))
   (if (in-thermal-set terrain-height offset-height)
-      (- terrain-height offset-height)
+      (- terrain-height offset-height) ;; will always be negative
       0f0))
 
 (defun-g thermal-sediment ((total-sediment :float)
                            (total-thermal-height :float)
                            (height :float))
   (* total-sediment
-     (/ height total-thermal-height)))
-
+     ;;                          cludge  ↓↓↓
+     (/ height (max total-thermal-height 0.0001))))
 
 
 (defun-g thermal-step-0 ((terrain-height :float)
@@ -219,16 +149,21 @@
                          (height-br :float)
                          (time-delta :float))
   (let* ((largest-height-diff
-          (max (- terrain-height height-l)
-               (max (- terrain-height height-r)
-                    (max (- terrain-height height-t)
-                         (max (- terrain-height height-b)
-                              (max (- terrain-height height-tl)
-                                   (max (- terrain-height height-tr)
-                                        (max (- terrain-height height-bl)
-                                             (- terrain-height height-br)))))))))
+          ;; the height diff to lowest neighbour
+          ;; cap to 0 so we can't get negative loss, it is the job
+          ;; of the next pass to accumulate sediment flux from
+          ;; neighbours
+          (max 0
+               (- terrain-height height-l)
+               (- terrain-height height-r)
+               (- terrain-height height-t)
+               (- terrain-height height-b)
+               (- terrain-height height-tl)
+               (- terrain-height height-tr)
+               (- terrain-height height-bl)
+               (- terrain-height height-br)))
 
-         (sediment (* (* *virtual-pipe-length* *virtual-pipe-length*)
+         (sediment (* (* *virtual-pipe-length* *virtual-pipe-length*) ;; area
                       time-delta
                       *thermal-erosion-rate*
                       (local-hardness)
@@ -320,6 +255,7 @@
                                      terrain-height water-height))
          (new-flux-b (flux-to-offset data-at-b flux-b time-delta
                                      terrain-height water-height))
+         ;; all elements will be >= 0
          (new-flux (v! new-flux-l new-flux-r new-flux-t new-flux-b))
 
          (local-water-volume (* water-height
@@ -340,6 +276,9 @@
          (x data-at-bl)
          (x data-at-br)
          time-delta)
+
+      ;; apply thermal erosion
+      ;; (decf terrain-height sediment-removed)
 
       (when (> (total-outflow new-flux time-delta) local-water-volume)
         (setf new-flux (* new-flux (k-factor 0.01 new-flux 0))))
@@ -371,6 +310,8 @@
                            (flux-at-r :vec4)
                            (flux-at-t :vec4)
                            (flux-at-b :vec4))
+  ;; positive if more water coming into cell
+  ;; negative if more water leaving cell
   (* time-delta
      (- (+ (y flux-at-l) (x flux-at-r) (w flux-at-t) (z flux-at-b))
         (+ (x flux) (y flux) (z flux) (w flux)))))
@@ -420,7 +361,8 @@
                               (height-b :float))
   (let* ((va (normalize (v! 1 0 (- height-r height-l))))
          (vb (normalize (v! 0 1 (- height-t height-b)))))
-    (cross va vb)))
+    (cross va vb) ;; this is killing it
+    (v! 0 1 0)))
 
 (defvar *soil-suspension-rate* 0.5) ;; ks
 (defvar *sediment-deposition-rate* 1.0) ;; kd
@@ -434,7 +376,7 @@
 ;; d3 = d2 − ∆t · Kd (st − C), (13c)
 
 (defun-g local-hardness ()
-  0.8)
+  0.1)
 
 (defun-g erode-sediment ((current-sediment :float)
                          (terrain-height :float)
@@ -471,15 +413,40 @@
      (- 1.0 (* *water-evaporation-rate*
                time-delta))))
 
+(defun-g accumulate-thermal-sediment ((thermal-map-0 :sampler-2d)
+                                      (thermal-map-1 :sampler-2d)
+                                      (uv-l :vec2)
+                                      (uv-r :vec2)
+                                      (uv-t :vec2)
+                                      (uv-b :vec2)
+                                      (uv-tl :vec2)
+                                      (uv-tr :vec2)
+                                      (uv-bl :vec2)
+                                      (uv-br :vec2))
+  (+ (y (texture thermal-map-0 uv-l)) ;; from-l
+     (x (texture thermal-map-0 uv-r)) ;; from-r
+     (w (texture thermal-map-0 uv-t)) ;; from-t
+     (z (texture thermal-map-0 uv-b)) ;; from-b
+     (w (texture thermal-map-1 uv-tl)) ;; from-tl
+     (z (texture thermal-map-1 uv-tr)) ;; from-tr
+     (y (texture thermal-map-1 uv-bl)) ;; from-bl
+     (x (texture thermal-map-1 uv-br)))) ;; from-br
+
 (defun-g erosion-step-1 ((uv :vec2)
                          &uniform (time-delta :float) (tex-size :float)
                          (height-water-sediment-map :sampler-2d)
-                         (flux-map :sampler-2d))
+                         (flux-map :sampler-2d)
+                         (thermal-map-0 :sampler-2d)
+                         (thermal-map-1 :sampler-2d))
   (let* ((tex-step (/ 1.0 tex-size))
          (uv-l (+ uv (v! (- tex-step) 0)))
          (uv-r (+ uv (v! tex-step 0)))
          (uv-t (+ uv (v! 0 tex-step)))
          (uv-b (+ uv (v! 0 (- tex-step))))
+         (uv-tl (+ uv (v! (- tex-step) tex-step)))
+         (uv-tr (+ uv (v! tex-step tex-step)))
+         (uv-bl (+ uv (v! (- tex-step) (- tex-step))))
+         (uv-br (+ uv (v! tex-step (- tex-step))))
          ;;
          ;; data
          (data (texture height-water-sediment-map uv))
@@ -509,16 +476,18 @@
          (new-water-height (calc-new-water-height water-height water-delta))
          ;;
          ;; Velocity
+         ;;
+         ;; hmm, velocity could be a zero vector
          (velocity-2d (calc-velocity-2d
                        flux flux-at-l flux-at-r flux-at-t flux-at-b))
 
-         (v2d-norm (normalize velocity-2d))
-         (offset-data (texture height-water-sediment-map
-                               (* v2d-norm tex-step)))
-         (offset-height (+ (x offset-data) (y offset-data)))
-         (new-y (- offset-height (+ terrain-height water-height)))
+         (offset-uv (* (normalize velocity-2d) tex-step))
+         (offset-data (texture height-water-sediment-map offset-uv))
+         (new-y (- (+ (x offset-data) (y offset-data))
+                   (+ terrain-height water-height)))
          (3d-tmp (v! (x velocity-2d) new-y (y velocity-2d)))
          (velocity-3d (* (normalize 3d-tmp) (length velocity-2d)))
+         ;;(velocity-3d (v! (x velocity-2d) 0 (y velocity-2d)))
 
          (c (calc-c normal water-height velocity-2d velocity-3d)))
 
@@ -532,6 +501,13 @@
                         c)
       (let ((water-minus-evaporation
              (evaporate new-water-height time-delta)))
+
+        ;; apply thermal erosion
+        ;; (incf new-terrain-height
+        ;;       (accumulate-thermal-sediment thermal-map-0 thermal-map-1
+        ;;                                    uv-l uv-r uv-t uv-b
+        ;;                                    uv-tl uv-tr uv-bl uv-br))
+
         (values (v! new-terrain-height
                     water-minus-evaporation
                     new-sediment
@@ -550,7 +526,9 @@
          :time-delta time-delta
          :tex-size 512.0
          :height-water-sediment-map (height-water-sediment-map src-state)
-         :flux-map (water-flux-map src-state)))
+         :flux-map (water-flux-map src-state)
+         :thermal-map-0 (thermal-map-0 src-state)
+         :thermal-map-1 (thermal-map-1 src-state)))
 
 (defun swap-state (terrain)
   (rotatef (state-0 terrain) (state-1 terrain)))
@@ -560,8 +538,28 @@
     (with-fbo-bound ((terrain-fbo (state-1 terrain)))
       (clear)
       (blit-erosion-0 (state-0 terrain) time-delta))
+    ;;(check-state 0)
     (swap-state terrain)
     (with-fbo-bound ((terrain-fbo (state-1 terrain)))
       (clear)
       (blit-erosion-1 (state-0 terrain) time-delta))
+    ;;(check-state 1)
     (swap-state terrain)))
+
+(defun check-state (id)
+  (with-c-array-freed (tmp (pull1-g
+                            (sampler-texture
+                             (height-water-sediment-map
+                              (state-1 *terrain*)))))
+    (let ((at nil)
+          (val nil))
+      (loop :for y :below 512 :by 1 :do
+         (loop :for x :below 512 :by 1 :do
+            (when (or (sb-ext:float-nan-p (x (aref-c tmp x y)))
+                      (sb-ext:float-nan-p (y (aref-c tmp x y)))
+                      (sb-ext:float-nan-p (z (aref-c tmp x y)))
+                      (sb-ext:float-nan-p (w (aref-c tmp x y))))
+              (setf at (list x y))
+              (setf val (aref-c tmp x y)))))
+      (when at
+        (break "fack ~a ~a ~a" id at val)))))
