@@ -81,11 +81,16 @@
   (map-g #'blit-noise-pipeline (get-quad-stream-v2)))
 
 (defun reset-terrain-state (terrain)
-  (with-fbo-bound ((terrain-fbo (state-0 terrain)))
+  (with-fbo-bound ((terrain-fbo (state-src terrain)))
     (clear)
     (blit-noise))
-  (with-fbo-bound ((terrain-fbo (state-1 terrain)))
+  (with-fbo-bound ((terrain-fbo (state-dst terrain)))
     (clear)
     (blit-noise)))
 
 ;;------------------------------------------------------------
+
+(defun swap-state (terrain)
+  (rotatef (state-src terrain) (state-dst terrain)))
+
+;------------------------------------------------------------

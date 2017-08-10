@@ -44,8 +44,8 @@
   ((stream :initform (latice 512 512 512 512))
    (sampler :initform (tex "dirt-and-water.png"))
    (scale :initform 1f0)
-   (state-0 :initform (make-terrain-state) :accessor state-0)
-   (state-1 :initform (make-terrain-state) :accessor state-1)))
+   (state-src :initform (make-terrain-state) :accessor state-src)
+   (state-dst :initform (make-terrain-state) :accessor state-dst)))
 
 (defun make-terrain ()
   (let ((terrain (make-instance 'terrain)))
@@ -56,7 +56,7 @@
   (erode (first *things*) time-delta))
 
 (defmethod draw ((thing terrain))
-  (let ((state (state-0 thing)))
+  (let ((state (state-src thing)))
     (map-g #'terrain-pipeline (buf-stream thing)
            :scale (scale thing)
            :model->world (get-model->world-space thing)
@@ -65,7 +65,7 @@
     (draw-state-dbg thing)))
 
 (defun draw-state-dbg (terrain)
-  (let ((state (state-0 terrain)))
+  (let ((state (state-src terrain)))
     (draw-tex-bl (height-water-sediment-map state))
     ;; (draw-tex-br (water-flux-map state))
     ;; (draw-tex-tr (water-velocity-map state))
