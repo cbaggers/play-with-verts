@@ -25,8 +25,8 @@
 
 (defun-g erosion-step-0 ((uv :vec2)
                           &uniform (time-delta :float) (tex-size :float)
-                          (height-water-sediment-map :sampler-2d)
-                          (flux-map :sampler-2d))
+                         (height-water-sediment-map :sampler-2d)
+                         (flux-map :sampler-2d))
   (let* ((uvs (get-erosion-uvs uv tex-size))
          (data (get-height-water-sediment uvs height-water-sediment-map))
          (flux (texture flux-map uv))
@@ -75,14 +75,16 @@
         (when (> (total-outflow new-flux time-delta) local-water-volume)
           (setf new-flux (* new-flux k)))
 
-        (values (v! terrain-height
-                    water-plus-rain
-                    sediment-amount
-                    0.0)
-                new-flux
-                (v! 0 0 0 0) ;; could be a bug
-                (v! k 0 0 0)
-                sediment-flux-1)))))
+        (let ((new-whs (v! terrain-height
+                           water-plus-rain
+                           sediment-amount
+                           0.0)))
+          (values new-whs
+                  new-flux
+                  (v! 0 0 0 0) ;; could be a bug
+                  (v! k 0 0 0)
+                  sediment-flux-1
+                  (v! k water-plus-rain water-height 0)))))))
 
 
 (defun-g erosion-step-1 ((uv :vec2)
@@ -118,7 +120,8 @@
                                         tex-size))
 
          ;; Sediment capacity
-         (c (calc-c normal water-height velocity-2d velocity-3d)))
+         (capacity
+          (calc-capacity normal water-height velocity-2d velocity-3d)))
 
     (multiple-value-bind (new-terrain-height
                           new-sediment
@@ -127,7 +130,7 @@
                         terrain-height
                         water-plus-delta
                         time-delta
-                        c)
+                        capacity)
       (let ((water-plus-delta-and-sediment-minus-evaporation
              (evaporate water-plus-delta-and-sediment time-delta)))
 
@@ -136,14 +139,16 @@
         ;;       (accumulate-thermal-sediment
         ;;        thermal-map-0 thermal-map-1
         ;;        uvs))
-        (values (v! new-terrain-height
-                    water-plus-delta-and-sediment-minus-evaporation
-                    new-sediment
-                    0)
-                (center fluxes)
-                (v! velocity-2d 0 0)
-                (v! 0 0 0 0)
-                (v! 0 0 0 0))))))
+        (let ((new-whs (v! new-terrain-height
+                           water-plus-delta-and-sediment-minus-evaporation
+                           new-sediment
+                           0)))
+          (values new-whs
+                  (center fluxes)
+                  (v! velocity-2d 0 0)
+                  (v! 0 0 0 0)
+                  (v! 0 0 0 0)
+                  (v! water-delta 0 0 0)))))))
 
 (defpipeline-g erosion-0 ()
   (quad-vert :vec2)
@@ -175,38 +180,53 @@
     (with-fbo-bound ((terrain-fbo (state-dst terrain)))
       (clear)
       (blit-erosion-0 (state-src terrain) time-delta))
-    ;; (check-states 0)
+    ;;(check-states 0)
     (swap-state terrain)
     (with-fbo-bound ((terrain-fbo (state-dst terrain)))
       (clear)
       (blit-erosion-1 (state-src terrain) time-delta))
-    ;; (check-states 1)
+    ;;(check-states 1)
     (swap-state terrain)))
 
 ;;------------------------------------------------------------
 
 (defun check-states (id)
   (let ((state (state-dst *terrain*)))
-    (check-state (list id :h)
-                 (height-water-sediment-map state)
-                 (thermal-map-0 state))
-    (check-state (list id :w)
-                 (water-flux-map state)
-                 (thermal-map-0 state))))
+    (check-state id (debug-map state))))
 
-(defun check-state (id sampler dbg)
+(defun check-state (id sampler)
   (with-c-array-freed (tmp (pull1-g (sampler-texture sampler)))
     (let ((at nil)
           (val nil))
       (loop :for y :below 512 :by 1 :do
          (loop :for x :below 512 :by 1 :do
-            (when (or (sb-ext:float-nan-p (x (aref-c tmp x y)))
-                      (sb-ext:float-nan-p (y (aref-c tmp x y)))
-                      (sb-ext:float-nan-p (z (aref-c tmp x y)))
-                      (sb-ext:float-nan-p (w (aref-c tmp x y))))
-              (setf at (list x y))
-              (setf val (aref-c tmp x y)))))
+            (let ((d (aref-c tmp x y)))
+              (when (or (sb-ext:float-nan-p (x d))
+                        (sb-ext:float-nan-p (y d))
+                        (sb-ext:float-nan-p (z d))
+                        (sb-ext:float-nan-p (w d))
+                        (sb-ext:float-infinity-p (x d))
+                        (sb-ext:float-infinity-p (y d))
+                        (sb-ext:float-infinity-p (z d))
+                        (sb-ext:float-infinity-p (w d)))
+                (setf at (list x y))
+                (setf val d)))))
       (when at
-        (with-c-array-freed (tmp1 (pull1-g (sampler-texture dbg)))
-          (break "fack ~a ~a ~a~%~a" id at val
-                 (apply #'aref-c tmp1 at)))))))
+        (break "in step-~a ~a ~a" id at val)))))
+
+;;------------------------------------------------------------
+
+(defun draw-state-dbg (terrain)
+  (let ((state (state-src terrain)))
+    (draw-tex-bl (height-water-sediment-map state))
+    (draw-tex-br (water-flux-map state))
+    (draw-tex-tr (water-velocity-map state))
+    ;; (draw-tex-br (thermal-map-0 state))
+    ;; (draw-tex-tr (thermal-map-1 state))
+    ))
+
+(defun draw-dbg ()
+  (as-frame
+    (draw-state-dbg (first *things*))))
+
+;;------------------------------------------------------------

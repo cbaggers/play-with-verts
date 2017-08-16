@@ -1,7 +1,7 @@
 (in-package :play-with-verts)
 
 (defun-g rain ((pos :vec2))
-  0.1)
+  0.2)
 
 ;; d1(x, y) = dt(x, y) + ∆t · rt(x, y) · Kr
 
@@ -57,12 +57,11 @@
   ;; flux when it was greater than the water-height.
   ;; Given that 'the outflow flux is mutlipled by K' we need
   ;; it to be in the 0..1 range to not make the issue greater
-  (clamp (/ (* water-height
-               *virtual-pipe-length*
-               *virtual-pipe-length*)
-            (min (total-outflow flux time-delta)
-                 0.0001))
-         0.1 1))
+  (min (/ (* water-height
+             *virtual-pipe-length*
+             *virtual-pipe-length*)
+          (total-outflow flux time-delta))
+       1))
 
 (defun-g calc-water-delta ((time-delta :float)
                            (fluxes water-flux))
@@ -118,10 +117,11 @@
 (defun-g water-depth-velocity-scale ((water-height :float))
   (- 1 (clamp (/ water-height *maximal-erosion-depth*) 0 1)))
 
-(defun-g calc-c ((normal :vec3)
-                 (water-height :float)
-                 (velocity-2d :vec2)
-                 (velocity-3d :vec3))
+(defun-g calc-capacity ((normal :vec3)
+                        (water-height :float)
+                        (velocity-2d :vec2)
+                        (velocity-3d :vec3))
+  ;; why can this be greater than zero with no water?
   (* *sediment-capacity*
      (dot (- normal) velocity-3d)
      (length velocity-2d)
@@ -151,29 +151,33 @@
                          (terrain-height :float)
                          (water-height :float)
                          (time-delta :float)
-                         (c :float))
+                         (capacity :float))
   ;; returns:
   ;; new-terrain-height
   ;; new-sediment
   ;; new-water-height
   (let* ((hardness (local-hardness))
-         (st current-sediment)
-         (sed (* time-delta
-                 hardness
-                 (* *soil-suspension-rate* (- c st))))
-         (sed2 (* time-delta
-                  *sediment-deposition-rate*
-                  (- st c))))
-    (if (< current-sediment c)
-        (return (values (- terrain-height sed)
-                        (+ current-sediment sed)
-                        (+ water-height (clamp sed 0 water-height))))
-        ;; revisit this ↓↓↓↓↓£
-        (return (values (+ terrain-height sed2)
-                        (- current-sediment sed2)
-                        (- water-height sed2))))))
+         (st current-sediment))
 
-(defvar *water-evaporation-rate* 0.015) ;; Ke
+    (if (< current-sediment capacity)
+        (let ((disolve (clamp (* time-delta
+                                 hardness
+                                 (* *soil-suspension-rate*
+                                    (- capacity st)))
+                              0
+                              water-height)))
+          (return (values (- terrain-height disolve)
+                          (+ current-sediment disolve)
+                          (+ water-height disolve))))
+
+        (let ((drop (* time-delta
+                       *sediment-deposition-rate*
+                       (- st capacity))))
+          (return (values (+ terrain-height drop)
+                          (- current-sediment drop)
+                          (max 0 (- water-height drop))))))))
+
+(defvar *water-evaporation-rate* 0.15) ;; Ke
 
 ;; dt+∆t(x, y) = d3(x, y) · (1 − Ke · ∆t)
 

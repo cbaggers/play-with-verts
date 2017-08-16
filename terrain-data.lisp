@@ -16,6 +16,9 @@
    (thermal-map-1
     :initarg :thermal-map-1
     :accessor thermal-map-1)
+   (debug-map
+    :initarg :debug-map
+    :accessor debug-map)
    (fbo
     :initarg :fbo
     :accessor terrain-fbo)))
@@ -30,6 +33,8 @@
         (t0-map
          (make-texture nil :dimensions '(512 512) :element-type :vec4))
         (t1-map
+         (make-texture nil :dimensions '(512 512) :element-type :vec4))
+        (dbg-map
          (make-texture nil :dimensions '(512 512) :element-type :vec4)))
     (make-instance
      'terrain-state
@@ -38,8 +43,9 @@
      :water-velocity-map (sample wv-map)
      :thermal-map-0 (sample t0-map)
      :thermal-map-1 (sample t1-map)
+     :debug-map (sample dbg-map)
      :fbo (make-fbo (list 0 hws-map) (list 1 wf-map) (list 2 wv-map)
-                    (list 3 t0-map) (list 4 t1-map)))))
+                    (list 3 t0-map) (list 4 t1-map) (list 5 dbg-map)))))
 
 ;;------------------------------------------------------------
 
@@ -55,6 +61,8 @@
   (free (thermal-map-0 terrain-state))
   (free (sampler-texture (thermal-map-1 terrain-state)))
   (free (thermal-map-1 terrain-state))
+  (free (sampler-texture (debug-map terrain-state)))
+  (free (debug-map terrain-state))
   nil)
 
 (defmethod free ((terrain-state terrain-state))
@@ -68,6 +76,7 @@
 
 (defun-g noise-frag ((uv :vec2))
   (values (v! (* 40 (perlin-noise (* 6 uv))) 0 0 0)
+          (v! 0 0 0 0)
           (v! 0 0 0 0)
           (v! 0 0 0 0)
           (v! 0 0 0 0)

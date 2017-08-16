@@ -64,17 +64,4 @@
            :height-water-sediment-map (height-water-sediment-map state))
     (draw-state-dbg thing)))
 
-(defun draw-state-dbg (terrain)
-  (let ((state (state-src terrain)))
-    (draw-tex-bl (height-water-sediment-map state))
-    ;; (draw-tex-br (water-flux-map state))
-    ;; (draw-tex-tr (water-velocity-map state))
-    ;; (draw-tex-br (thermal-map-0 state))
-    ;; (draw-tex-tr (thermal-map-1 state))
-    ))
-
-(defun draw-dbg ()
-  (as-frame
-    (draw-state-dbg (first *things*))))
-
 ;;------------------------------------------------------------
