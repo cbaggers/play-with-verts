@@ -2,7 +2,6 @@
 
 ;;------------------------------------------------------------
 
-(defvar *delta* 1)
 (defvar *last-time* (get-internal-real-time))
 
 (defun reset ()
@@ -13,29 +12,28 @@
   (let* ((now (get-internal-real-time))
          (delta (* (- now *last-time*) 0.001))
          (delta (if (> delta 0.16) 0.00001 delta)))
-    (setf *delta* delta)
-    (setf *last-time* now))
+    (setf *last-time* now)
 
-  ;; update camera
-  (update-camera *camera* *delta*)
+    ;; update camera
+    (update *camera* delta)
 
-  ;; set the position of our viewport
-  (setf (resolution (current-viewport))
-        (surface-resolution (current-surface *cepl-context*)))
+    ;; set the position of our viewport
+    (setf (resolution (current-viewport))
+          (surface-resolution (current-surface *cepl-context*)))
 
-  ;; clear the default fbo
-  (clear)
+    ;; clear the default fbo
+    (clear)
 
-  ;; render ALL THE *THINGS*
-  (upload-uniforms-for-cam *camera*)
+    ;; render ALL THE *THINGS*
+    (upload-uniforms-for-cam *camera*)
 
-  (loop :for thing :in *things* :do
-     (update thing)
-     (draw thing))
+    (loop :for thing :in *things* :do
+       (update thing delta)
+       (draw thing))
 
-  ;; display what we have drawn
-  (swap)
-  (decay-events))
+    ;; display what we have drawn
+    (swap)
+    (decay-events)))
 
 
 (def-simple-main-loop play (:on-start #'reset)

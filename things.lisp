@@ -46,7 +46,7 @@
 (defun make-ground ()
   (push (make-instance 'ground) *things*))
 
-(defmethod update ((thing ground))
+(defmethod update ((thing ground) dt)
   (setf (scale thing) 0.4))
 
 ;;------------------------------------------------------------

@@ -102,7 +102,7 @@
                       (x (viewport-resolution (current-viewport)))
                       (y (viewport-resolution (current-viewport)))
                       0.1
-                      200f0
+                      400f0
                       60f0)))
 
 ;;------------------------------------------------------------

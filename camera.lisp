@@ -15,16 +15,16 @@
   (m4:* (q:to-mat4 (q:inverse (rot camera)))
         (m4:translation (v3:negate (pos camera)))))
 
-(defun update-camera (camera delta)
+(defmethod update ((camera camera) dt)
   (when (keyboard-button (keyboard) key.w)
     (v3:incf (pos camera)
              (v3:*s (q:to-direction (rot camera))
-                    (* 10 delta))))
+                    (* 10 dt))))
 
   (when (keyboard-button (keyboard) key.s)
     (v3:decf (pos camera)
              (v3:*s (q:to-direction (rot camera))
-                    (* 10 delta))))
+                    (* 10 dt))))
 
   (when (mouse-button (mouse) mouse.left)
     (let ((move (v2:*s (mouse-move (mouse))
