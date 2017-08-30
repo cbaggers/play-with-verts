@@ -40,14 +40,13 @@
 
 (defclass ground (thing)
   ((stream :initform (box 40 1 40))
-   (sampler :initform (tex "dirt.jpg"))
-   (scale :initform 0.4)))
+   (sampler :initform (tex "dirt.jpg"))))
 
 (defun make-ground ()
   (push (make-instance 'ground) *things*))
 
 (defmethod update ((thing ground) dt)
-  (setf (scale thing) 0.4))
+  nil)
 
 ;;------------------------------------------------------------
 ;; Foo!
