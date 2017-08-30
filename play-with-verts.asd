@@ -13,5 +13,6 @@
                (:file "render")
                (:file "assets")
                (:file "things")
+               (:file "boids")
                (:file "camera")
                (:file "play-with-verts")))
