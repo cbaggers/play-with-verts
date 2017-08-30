@@ -6,6 +6,7 @@
 
 (defun reset ()
   (setf *things* nil)
+  (setf *boids* nil)
   (make-ground))
 
 (defun game-step ()
