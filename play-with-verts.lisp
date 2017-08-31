@@ -155,39 +155,47 @@
     (setf (body-force body) (v! 0s0 (* -1.8 mass) 0s0 0s0))))
 
 (defvar *fps* 0)
-(defvar *fps-wip* 0)
 (defvar *stepper* (make-stepper (seconds 1)))
+(defvar *last-time* (get-internal-real-time))
+(defvar *phys-stepper* (make-stepper (seconds 0.01)))
 
 (defun draw ()
-  (incf *fps-wip*)
   (when (funcall *stepper*)
-    (setf *fps* (print *fps-wip*)
-          *fps-wip* 0))
+    (print *fps*)
+    (setf *fps* 0))
+  (incf *fps*)
+  (let* ((now (get-internal-real-time))
+         ;;(delta (* (- now *last-time*) 0.001))
+         ;;(delta (if (> delta 0.16) 0.00001 delta))
+         )
+    (setf *last-time* now)
 
-  (world-step *world* (/ 1f0 *fps*))
+    (when (funcall *phys-stepper*)
+      (world-step *world* 0.01)
+      )
 
-  ;; tell the host to pump all the events
-  (step-host)
+    ;; tell the host to pump all the events
+    (step-host)
 
-  ;; Update the position of our light
-  (let ((val (* 10 (now))))
-    (setf *light-pos* (v! (* 20 (sin val))
-                          20
-                          (- (* 20 (cos val)) 14))))
+    ;; Update the position of our light
+    (let ((val (* 10 (now))))
+      (setf *light-pos* (v! (* 20 (sin val))
+                            20
+                            (- (* 20 (cos val)) 14))))
 
-  ;; set the position of our viewport
-  (setf (resolution (current-viewport))
-        (surface-resolution (current-surface *cepl-context*)))
+    ;; set the position of our viewport
+    (setf (resolution (current-viewport))
+          (surface-resolution (current-surface *cepl-context*)))
 
-  ;; clear the default fbo
-  (clear)
+    ;; clear the default fbo
+    (clear)
 
-  ;; render ALL THE *THINGS*
-  (loop :for thing :in *things* :do
-     (draw-thing thing *camera*))
+    ;; render ALL THE *THINGS*
+    (loop :for thing :in *things* :do
+       (draw-thing thing *camera*))
 
-  ;; display what we have drawn
-  (swap))
+    ;; display what we have drawn
+    (swap)))
 
 
 
