@@ -1,4 +1,4 @@
-(in-package #:play-with-verts)
+(rin-package #:play-with-verts)
 
 ;;------------------------------------------------------------
 ;; Light
@@ -44,7 +44,7 @@
 
 (defclass ground (thing)
   ((stream :initform (box 40 1 40))
-   (sampler :initform (tex "dirt.jpg"))))
+   (sampler :initform (get-tex "dirt.jpg"))))
 
 (defun make-ground ()
   (push (make-instance 'ground) *things*))
@@ -56,10 +56,31 @@
 ;; Foo!
 
 (defvar *vcones* nil)
+(defvar *per-cone-gpu-data* nil)
+(defvar *cone-stream* nil)
+
+(defstruct-g cone-data
+  (pos :vec2 :accessor pos)
+  (color :vec3 :accessor color))
+
+(defun init-cones ()
+  (unless *vcones*
+    (setf *per-cone-gpu-data*
+          (make-gpu-array nil :dimensions 1000
+                          :element-type 'cone-data)))
+  (unless *cone-stream*
+    (destructuring-bind (vert index)
+        (nineveh.mesh.data.primitives:cone-gpu-arrays
+         :radius 20f0
+         :height 20f0)
+      (setf *cone-stream*
+            (make-buffer-stream
+             (list vert (cons *per-cone-gpu-data* 1))
+             :index-array index)))))
 
 (defclass vcone (thing)
-  ((stream :initform (cone 20f0 20f0))
-   (sampler :initform (tex "dirt.jpg"))
+  ((stream :initform *cone-stream*)
+   (sampler :initform (get-tex "dirt.jpg"))
    (start-pos :initform (rand-pos) :accessor start-pos)
    (end-pos :initform (rand-pos) :accessor end-pos)))
 
@@ -73,7 +94,6 @@
         (pos (rand-pos)))
     (setf (pos res) pos)
     (push res *vcones*)
-    (push res *things*)
     res))
 
 (defparameter *tfunc*
@@ -91,5 +111,16 @@
 
 (defmethod update ((thing vcone) dt)
   (funcall *tfunc* thing))
+
+(defun draw-cones (camera)
+  (with-instances (length *vcones*)
+    (map-g #'inst-pipeline *cone-stream*
+           :world->view (get-world->view-space camera)
+           :view->clip (projection
+                        camera
+                        (* 0.3 (x (viewport-resolution
+                                   (current-viewport))))
+                        (* 0.3 (y (viewport-resolution
+                                   (current-viewport))))))))
 
 ;;------------------------------------------------------------

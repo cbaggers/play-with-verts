@@ -6,6 +6,8 @@
 
 (defun reset ()
   (setf *things* nil)
+  (setf *vcones* nil)
+  (init-cones)
   (make-ground))
 
 (defun game-step ()
@@ -30,6 +32,16 @@
     (loop :for thing :in *things* :do
        (update thing delta)
        (draw thing))
+
+    (with-gpu-array-as-c-array
+        (carr *per-cone-gpu-data*)
+      (loop :for cone :in *vcones* :for i :from 0 :do
+         (let ((elem (aref-c carr i))
+               (pos (pos cone)))
+           (setf (pos elem) (v! (x pos) (z pos))
+                 (color elem) (color cone)))))
+
+    (draw-cones *current-camera*)
 
     ;; display what we have drawn
     (swap)
