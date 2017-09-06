@@ -35,6 +35,15 @@
           (setf (gethash key *meshes*)
                 (make-buffer-stream vert :index-array index))))))
 
+(defun cone (&optional (radius 1f0) (height 1f0))
+  (let ((key (list radius height)))
+    (or (gethash key *meshes*)
+        (destructuring-bind (vert index)
+            (nineveh.mesh.data.primitives:cone-gpu-arrays :radius radius
+                                                          :height height)
+          (setf (gethash key *meshes*)
+                (make-buffer-stream vert :index-array index))))))
+
 ;;------------------------------------------------------------
 ;; Textures & Samplers
 ;;
