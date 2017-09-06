@@ -65,6 +65,10 @@
 
 ;;------------------------------------------------------------
 
+(defstruct-g cone-data
+  (pos :vec2 :accessor pos)
+  (color :vec3 :accessor color))
+
 ;; We will use this function as our vertex shader
 (defun-g inst-vert-stage ((vert g-pnt)
                           (per-inst-data cone-data)

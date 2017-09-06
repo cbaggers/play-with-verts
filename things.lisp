@@ -1,4 +1,4 @@
-(rin-package #:play-with-verts)
+(in-package #:play-with-verts)
 
 ;;------------------------------------------------------------
 ;; Light
@@ -58,10 +58,6 @@
 (defvar *vcones* nil)
 (defvar *per-cone-gpu-data* nil)
 (defvar *cone-stream* nil)
-
-(defstruct-g cone-data
-  (pos :vec2 :accessor pos)
-  (color :vec3 :accessor color))
 
 (defun init-cones ()
   (unless *vcones*
