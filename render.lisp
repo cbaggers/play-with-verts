@@ -101,8 +101,8 @@
          :view->clip (rtg-math.projection:perspective
                       (x (viewport-resolution (current-viewport)))
                       (y (viewport-resolution (current-viewport)))
-                      0.1
+                      1f0
                       400f0
-                      60f0)))
+                      45f0)))
 
 ;;------------------------------------------------------------
