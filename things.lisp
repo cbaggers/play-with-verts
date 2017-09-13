@@ -53,6 +53,46 @@
   nil)
 
 ;;------------------------------------------------------------
+;; cobbles
+
+(defvar *1st-pass* nil)
+(defvar *1st-pass-sampler* nil)
+
+(defvar *2nd-pass* nil)
+(defvar *2nd-pass-sampler* nil)
+
+(defvar *3rd-pass* nil)
+(defvar *3rd-pass-sampler* nil)
+
+(defvar *cobbles* nil)
+
+(defclass cobbles (thing)
+  ((stream :initform (lattice))))
+
+(defun make-cobbles ()
+  (let ((res (make-instance 'cobbles)))
+    (setf *cobbles* res)
+    (push res *things*)))
+
+(defmethod update ((thing cobbles) dt)
+  nil)
+
+(defmethod draw ((thing cobbles))
+  (let ((camera *camera-1*))
+    (map-g #'lattice-pipeline (buf-stream thing)
+           :now (now)
+           :world->view (get-world->view-space camera)
+           :view->clip (projection
+                        camera
+                        (* 0.3 (x (viewport-resolution
+                                   (current-viewport))))
+                        (* 0.3 (y (viewport-resolution
+                                   (current-viewport)))))
+           :albedo *3rd-pass-sampler*
+           :scale (scale thing)
+           :model->world (get-model->world-space thing))))
+
+;;------------------------------------------------------------
 ;; Foo!
 
 (defvar *vcones* nil)

@@ -4,15 +4,6 @@
 
 (defvar *last-time* (get-internal-real-time))
 
-(defvar *1st-pass* nil)
-(defvar *1st-pass-sampler* nil)
-
-(defvar *2nd-pass* nil)
-(defvar *2nd-pass-sampler* nil)
-
-(defvar *3rd-pass* nil)
-(defvar *3rd-pass-sampler* nil)
-
 (defun reset ()
   (setf *things* nil)
   (setf *vcones* nil)
@@ -28,6 +19,11 @@
     (setf *3rd-pass* (make-fbo 0 :d))
     (setf *3rd-pass-sampler*
           (sample (attachment-tex *3rd-pass* 0))))
+
+  (setf (pos *camera*) (v! 0 20 0))
+  (setf (rot *camera*)
+        (q:from-axis-angle (v! 1 0 0) (radians -90f0)))
+
   (make-ground))
 
 (defun game-step ()
@@ -37,18 +33,16 @@
     (setf *last-time* now)
 
     ;; update camera
-    (update *current-camera* delta)
+    (update *camera-1* delta)
 
     ;; set the position of our viewport
     (setf (resolution (current-viewport))
           (surface-resolution (current-surface *cepl-context*)))
 
-    ;; render ALL THE *THINGS*
-    (upload-uniforms-for-cam *current-camera*)
-
     (with-fbo-bound (*1st-pass*)
       (clear)
-      (loop :for thing :in *things* :do
+      (upload-uniforms-for-cam *camera*)
+      (loop :for thing :in *vcones* :do
          (update thing delta)
          (draw thing)))
 
@@ -67,8 +61,18 @@
          (rotatef src-fbo dst-fbo)
          (rotatef src-sampler dst-sampler)))
 
+    (with-fbo-bound (*3rd-pass*)
+      (clear)
+      (threshold *2nd-pass-sampler*
+                 :voronoi *1st-pass-sampler*))
+
+    ;; lattice
+
     (clear)
-    (threshold *2nd-pass-sampler*)
+    ;; temp!
+    (update *cobbles* delta)
+    (draw *cobbles*)
+
     ;; display what we have drawn
     (swap)
     (decay-events)))

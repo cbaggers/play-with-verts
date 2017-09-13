@@ -37,6 +37,45 @@
      world-norm
      uv)))
 
+(defun-g lattice-frag-stage ((frag-pos :vec3)
+                             (frag-normal :vec3)
+                             (uv :vec2)
+                             &uniform (light-pos :vec3)
+                             (cam-pos :vec3)
+                             (albedo :sampler-2d))
+  (let* (;; we will multiply with color with the light-amount
+         ;; to get our final color
+         (object-color (texture albedo uv))
+
+         ;; We need to normalize the normal because the linear
+         ;; interpolation from the vertex shader will have shortened it
+         (frag-normal (normalize frag-normal))
+
+         ;; ambient color is the same from all directions
+         (ambient 0.2)
+
+         ;; diffuse color is the cosine of the angle between the light
+         ;; and the normal. As both the vectors are normalized we can
+         ;; use the dot-product to get this.
+         (vec-to-light (- light-pos frag-pos))
+         (dir-to-light (normalize vec-to-light))
+         (diffuse (saturate (dot dir-to-light frag-normal)))
+
+         ;; The specular is similar but we do it between the direction
+         ;; our camera is looking and the direction the light will reflect.
+         ;; We also raise it to a big power so it's a much smaller spot
+         ;; with a quick falloff
+         (vec-to-cam (- cam-pos frag-pos))
+         (dir-to-cam (normalize vec-to-cam))
+         (reflection (normalize (reflect (- dir-to-light) frag-normal)))
+
+         ;; The final light amount is the sum of the different components
+         (light-amount (+ ambient diffuse)))
+
+    ;; And we multipy with the object color. This means that 0 light results
+    ;; in no color, and 1 light results in full color. Cool!
+    (* object-color light-amount)))
+
 ;; We will use this function as our fragment shader
 (defun-g some-frag-stage ((frag-pos :vec3)
                           (frag-normal :vec3)
@@ -49,6 +88,10 @@
 (defpipeline-g some-pipeline ()
   (some-vert-stage g-pnt)
   (some-frag-stage :vec3 :vec3 :vec2))
+
+(defpipeline-g lattice-pipeline ()
+  (some-vert-stage g-pnt)
+  (lattice-frag-stage :vec3 :vec3 :vec2))
 
 ;;------------------------------------------------------------
 
