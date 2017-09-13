@@ -14,5 +14,6 @@
                (:file "assets")
                (:file "things")
                (:file "camera")
+               (:file "kernel-helpers")
                (:file "kernel")
                (:file "play-with-verts")))

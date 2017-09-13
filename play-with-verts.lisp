@@ -58,8 +58,8 @@
 
     (let ((src-fbo *2nd-pass*)
           (src-sampler *2nd-pass-sampler*)
-          (dst-fbo *1st-pass*)
-          (dst-sampler *1st-pass-sampler*))
+          (dst-fbo *3rd-pass*)
+          (dst-sampler *3rd-pass-sampler*))
       (loop :for i :below 4 :do
          (with-fbo-bound (dst-fbo)
            (clear)
