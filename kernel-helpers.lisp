@@ -6,6 +6,8 @@
   (values (v! vert 0 1)
           (+ (vec2 0.5) (* vert 0.5))))
 
+(defun calc-step ()
+  (v2:/ (v! 1 1) (viewport-resolution (current-viewport))))
 
 (defun calc-edge-len (weights)
   (multiple-value-bind (edge-len remainder) (floor (sqrt (length weights)))
@@ -43,7 +45,7 @@
        (defun ,name (sampler)
          (map-g #',pline-name (get-quad-stream-v2)
                 :tex sampler
-                :step (v2:/ (v! 1 1) (viewport-resolution (current-viewport))))))))
+                :step (calc-step))))))
 
 (defmacro def-frag-pipeline (name
                              (uv-var sampler-var step-var
@@ -73,5 +75,5 @@
                                    (cons '&key uniform-names)))
            (map-g #',pline-name (get-quad-stream-v2)
                   ,sam-kwd sampler
-                  ,step-kwd (v2:/ (v! 1 1) (viewport-resolution (current-viewport)))
+                  ,step-kwd (calc-step)
                   ,@(mapcan #'list uniform-kwds uniform-names)))))))

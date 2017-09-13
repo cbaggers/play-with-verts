@@ -26,15 +26,19 @@
         (m4:translation (v3:negate (pos camera)))))
 
 (defmethod update ((camera camera) dt)
-  (when (keyboard-button (keyboard) key.w)
-    (v3:incf (pos camera)
-             (v3:*s (q:to-direction (rot camera))
-                    (* 10 dt))))
+  (let ((factor 10))
+    (when (keyboard-button (keyboard) key.lshift)
+      (setf factor 20))
 
-  (when (keyboard-button (keyboard) key.s)
-    (v3:decf (pos camera)
-             (v3:*s (q:to-direction (rot camera))
-                    (* 10 dt))))
+    (when (keyboard-button (keyboard) key.w)
+      (v3:incf (pos camera)
+               (v3:*s (q:to-direction (rot camera))
+                      (* factor dt))))
+
+    (when (keyboard-button (keyboard) key.s)
+      (v3:decf (pos camera)
+               (v3:*s (q:to-direction (rot camera))
+                      (* factor dt)))))
 
   (when (mouse-button (mouse) mouse.left)
     (let ((move (v2:*s (mouse-move (mouse))
@@ -43,10 +47,8 @@
             (q:normalize
              (q:* (rot camera)
                   (q:normalize
-                   (q:* (q:from-axis-angle
-                         (v! 1 0 0) (- (y move)))
-                        (q:from-axis-angle
-                         (v! 0 1 0) (- (x move)))))))))))
+                   (q:* (q:from-axis-angle (v! 1 0 0) (- (y move)))
+                        (q:from-axis-angle (v! 0 1 0) (- (x move)))))))))))
 
 (defun reset-camera (&optional (cam *current-camera*))
   (setf (pos cam) (v! -0.43 25.33 43.20)

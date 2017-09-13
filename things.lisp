@@ -90,7 +90,8 @@
                                    (current-viewport)))))
            :albedo *3rd-pass-sampler*
            :scale (scale thing)
-           :model->world (get-model->world-space thing))))
+           :model->world (get-model->world-space thing)
+           :step (calc-step))))
 
 ;;------------------------------------------------------------
 ;; Foo!

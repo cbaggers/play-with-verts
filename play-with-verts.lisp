@@ -72,6 +72,7 @@
     ;; temp!
     (update *cobbles* delta)
     (draw *cobbles*)
+    ;;(k-blit *1st-pass-sampler*)
 
     ;; display what we have drawn
     (swap)
