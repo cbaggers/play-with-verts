@@ -7,10 +7,18 @@
 (defvar *1st-pass* nil)
 (defvar *1st-pass-sampler* nil)
 
+(defvar *2nd-pass* nil)
+(defvar *2nd-pass-sampler* nil)
 
 (defun reset ()
   (setf *things* nil)
   (setf *vcones* nil)
+  (unless *1st-pass*
+    (setf *1st-pass-sampler*
+          (sample (attachment-tex *1st-pass* 0))))
+  (unless *2nd-pass*
+    (setf *2nd-pass-sampler*
+          (sample (attachment-tex *2nd-pass* 0))))
   (make-ground))
 
 (defun game-step ()
@@ -36,9 +44,12 @@
          (draw thing)))
 
     ;; clear the default fbo
-    (clear)
-    (k-blit *1st-pass-sampler*)
+    (with-fbo-bound (*2nd-pass*)
+      (clear)
+      (k-edge *1st-pass-sampler*))
 
+    (clear)
+    (k-gaussian *2nd-pass-sampler*)
     ;; display what we have drawn
     (swap)
     (decay-events)))
