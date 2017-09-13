@@ -17,12 +17,15 @@
   (setf *things* nil)
   (setf *vcones* nil)
   (unless *1st-pass*
+    (setf *1st-pass* (make-fbo 0 :d))
     (setf *1st-pass-sampler*
           (sample (attachment-tex *1st-pass* 0))))
   (unless *2nd-pass*
+    (setf *2nd-pass* (make-fbo 0 :d))
     (setf *2nd-pass-sampler*
           (sample (attachment-tex *2nd-pass* 0))))
   (unless *3rd-pass*
+    (setf *3rd-pass* (make-fbo 0 :d))
     (setf *3rd-pass-sampler*
           (sample (attachment-tex *3rd-pass* 0))))
   (make-ground))
