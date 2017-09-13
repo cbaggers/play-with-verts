@@ -10,6 +10,7 @@
                :sdl2-game-controller-db)
   :components ((:file "package")
                (:file "utils")
+               (:file "render-lattice")
                (:file "render")
                (:file "assets")
                (:file "things")
