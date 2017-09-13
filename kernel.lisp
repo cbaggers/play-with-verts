@@ -44,6 +44,29 @@
                 :tex sampler
                 :step (v2:/ (v! 1 1) (viewport-resolution (current-viewport))))))))
 
+(defmacro def-frag-pipeline (name
+                           (uv-var sampler-var step-var)
+                           &body body)
+  (let* (;; helpers values
+         (frag-name (intern (format nil "~a-FRAG" name)))
+         (pline-name (intern (format nil "~a-PIPELINE" name)))
+         (step-kwd (intern (symbol-name step-var) :keyword))
+         (sam-kwd (intern (symbol-name sampler-var) :keyword)))
+    ;;
+    `(progn
+       (defun-g ,frag-name ((,uv-var :vec2)
+                            &uniform
+                            (,sampler-var :sampler-2d)
+                            (,step-var :vec2))
+         ,@body)
+       (defpipeline-g ,pline-name ()
+         :vertex (shared-vert :vec2)
+         :fragment (,frag-name :vec2))
+       (defun ,name (sampler)
+         (map-g #',pline-name (get-quad-stream-v2)
+                ,sam-kwd sampler
+                ,step-kwd (v2:/ (v! 1 1) (viewport-resolution (current-viewport))))))))
+
 (def-kernel k-blit ()
   1)
 
@@ -58,3 +81,10 @@
   6 24 36 24 6
   4 16 24 16 4
   1  4  6  4 1)
+
+(def-frag-pipeline threshold (uv sam step)
+  (let* ((col (texture sam uv))
+         (val (+ (x col) (y col) (z col)))
+         (grout (v! 0.4 0.4 0.4)))
+    (* (step 0.1 val)
+       grout)))
