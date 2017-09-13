@@ -24,6 +24,8 @@
   (setf (rot *camera*)
         (q:from-axis-angle (v! 1 0 0) (radians -90f0)))
 
+  (make-cobbles)
+  (loop :repeat 200 :do (make-vcone))
   (make-ground))
 
 (defun game-step ()
