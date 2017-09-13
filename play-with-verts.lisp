@@ -4,8 +4,13 @@
 
 (defvar *last-time* (get-internal-real-time))
 
+(defvar *1st-pass* nil)
+(defvar *1st-pass-sampler* nil)
+
+
 (defun reset ()
   (setf *things* nil)
+  (setf *vcones* nil)
   (make-ground))
 
 (defun game-step ()
@@ -21,15 +26,18 @@
     (setf (resolution (current-viewport))
           (surface-resolution (current-surface *cepl-context*)))
 
-    ;; clear the default fbo
-    (clear)
-
     ;; render ALL THE *THINGS*
     (upload-uniforms-for-cam *current-camera*)
 
-    (loop :for thing :in *things* :do
-       (update thing delta)
-       (draw thing))
+    (with-fbo-bound (*1st-pass*)
+      (clear)
+      (loop :for thing :in *things* :do
+         (update thing delta)
+         (draw thing)))
+
+    ;; clear the default fbo
+    (clear)
+    (k-blit *1st-pass-sampler*)
 
     ;; display what we have drawn
     (swap)

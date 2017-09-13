@@ -7,7 +7,7 @@
         :accessor pos)
    (rot :initform (v! 0.97 -0.20 -0.01 0.0)
         :accessor rot)
-   (near :initform 0.1f0
+   (near :initform 1f0
          :accessor near)
    (far :initform 400f0
          :accessor far)))
@@ -15,7 +15,7 @@
 (defclass orthographic-camera (camera) ())
 
 (defclass perspective-camera (camera)
-  ((fov :initform 60f0 :accessor fov)))
+  ((fov :initform 45f0 :accessor fov)))
 
 (defparameter *camera* (make-instance 'orthographic-camera))
 (defparameter *camera-1* (make-instance 'perspective-camera))
