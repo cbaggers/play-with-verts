@@ -102,7 +102,17 @@
   ((stream :initform (cone 20f0 20f0))
    (sampler :initform (tex "dirt.jpg"))
    (start-pos :initform (rand-pos) :accessor start-pos)
-   (end-pos :initform (rand-pos) :accessor end-pos)))
+   (end-pos :initform (rand-pos) :accessor end-pos)
+   (second-color :initform (alexandria:random-elt (list (v! 1 0 0)
+                                                        (v! 0 1 0)
+                                                        (v! 0 0 1)))
+                 :accessor second-color)))
+
+(defun draw-second-color (thing)
+  (map-g #'some-pipeline (buf-stream thing)
+         :scale (scale thing)
+         :model->world (get-model->world-space thing)
+         :color (second-color thing)))
 
 (defun rand-pos ()
   (v! (- (random 140f0) 70f0)

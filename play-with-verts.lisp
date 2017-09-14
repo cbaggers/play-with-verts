@@ -63,6 +63,12 @@
          (rotatef src-fbo dst-fbo)
          (rotatef src-sampler dst-sampler)))
 
+    (with-fbo-bound (*1st-pass*)
+      (clear)
+      (upload-uniforms-for-cam *camera*)
+      (loop :for thing :in *vcones* :do
+        (draw-second-color thing)))
+
     (with-fbo-bound (*3rd-pass*)
       (clear)
       (threshold *2nd-pass-sampler*
