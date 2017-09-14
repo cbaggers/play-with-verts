@@ -27,7 +27,7 @@
     (clear)
 
     ;; render ALL THE *THINGS*
-    (upload-uniforms-for-cam *current-camera*)
+    (upload-uniforms-for-cam #'inst-pipeline *current-camera*)
 
     (loop :for thing :in *things* :do
        (update thing delta)
@@ -36,6 +36,7 @@
     (with-gpu-array-as-c-array
         (carr *per-cone-gpu-data*)
       (loop :for cone :in *vcones* :for i :from 0 :do
+         (update cone delta)
          (let ((elem (aref-c carr i))
                (pos (pos cone)))
            (setf (pos elem) (v! (x pos) (z pos))

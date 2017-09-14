@@ -52,8 +52,8 @@
 
 ;;------------------------------------------------------------
 
-(defun upload-uniforms-for-cam (camera)
-  (map-g #'some-pipeline nil
+(defun upload-uniforms-for-cam (pipeline camera)
+  (map-g pipeline nil
          :now (now)
          :world->view (get-world->view-space camera)
          :view->clip (projection
