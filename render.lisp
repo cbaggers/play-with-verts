@@ -109,8 +109,7 @@
 
 ;; We will use this function as our fragment shader
 (defun-g inst-frag-stage ((color :vec3))
-  ;;color
-  (v! 1 0 0 0))
+  color)
 
 ;; The pipeline itself, we map-g over this to draw stuff
 (defpipeline-g inst-pipeline ()
