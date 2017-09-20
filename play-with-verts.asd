@@ -14,4 +14,6 @@
                (:file "assets")
                (:file "things")
                (:file "camera")
+               (:file "flow")
+               (:file "particles")
                (:file "play-with-verts")))

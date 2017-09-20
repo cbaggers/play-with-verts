@@ -6,6 +6,12 @@
 
 (defun reset ()
   (setf *things* nil)
+  (unless *vector-field*
+    (setf *vector-field* (make-fbo 0 :d))
+    (setf *vector-field-sampler*
+          (sample (attachment-tex *vector-field* 0))))
+  (unless *particles*
+    (setf *particles* (make-particles-data)))
   (make-ground))
 
 (defun game-step ()

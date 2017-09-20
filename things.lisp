@@ -51,6 +51,33 @@
 ;;------------------------------------------------------------
 ;; Foo!
 
+(defclass ball (thing)
+  ((stream :initform (sphere 1f0))
+   (sampler :initform (tex "dirt.jpg"))))
 
+(defun make-ball ()
+  (push (make-instance 'ball) *things*))
+
+(defmethod update ((thing ball) dt)
+  nil)
+
+(defmethod draw ((thing ball))
+  (let ((camera *camera*))
+    (with-instances 1000
+      (map-g #'some-pipeline (buf-stream thing)
+             :scale (scale thing)
+             :model->world (get-model->world-space thing)
+             :albedo (sampler thing)
+             :spec-map (specular-sampler thing)
+             :light-pos *light-pos*
+             :cam-pos (pos camera)
+             :now (now)
+             :world->view (get-world->view-space camera)
+             :view->clip (rtg-math.projection:perspective
+                          (x (viewport-resolution (current-viewport)))
+                          (y (viewport-resolution (current-viewport)))
+                          1f0
+                          400f0
+                          45f0)))))
 
 ;;------------------------------------------------------------
