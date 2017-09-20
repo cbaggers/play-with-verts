@@ -31,6 +31,14 @@
        (update thing delta)
        (draw thing))
 
+    (blit-noise)
+
+    (update-particles delta)
+
+    ;; (clear)
+    ;; (draw-tex-tr *vector-field-sampler*)
+    ;; (draw-tex-tr (slot-value *particles* 'dst-sampler))
+
     ;; display what we have drawn
     (swap)
     (decay-events)))
