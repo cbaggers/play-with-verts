@@ -15,7 +15,7 @@
     (setf *last-time* now)
 
     ;; update camera
-    (update *camera* delta)
+    (update *current-camera* delta)
 
     ;; set the position of our viewport
     (setf (resolution (current-viewport))
@@ -25,7 +25,7 @@
     (clear)
 
     ;; render ALL THE *THINGS*
-    (upload-uniforms-for-cam *camera*)
+    (upload-uniforms-for-cam *current-camera*)
 
     (loop :for thing :in *things* :do
        (update thing delta)
