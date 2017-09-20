@@ -7,12 +7,13 @@
 (defun reset ()
   (setf *things* nil)
   (unless *vector-field*
-    (setf *vector-field* (make-fbo 0 :d))
-    (setf *vector-field-sampler*
-          (sample (attachment-tex *vector-field* 0))))
+    (let ((tex (make-texture nil :dimensions '(256 256)
+                             :element-type :vec4)))
+      (setf *vector-field* (make-fbo (list 0 tex)))
+      (setf *vector-field-sampler* (sample tex))))
   (unless *particles*
     (setf *particles* (make-particles-data)))
-  (make-ground))
+  (make-ball))
 
 (defun game-step ()
   (let* ((now (get-internal-real-time))
@@ -27,23 +28,19 @@
     (setf (resolution (current-viewport))
           (surface-resolution (current-surface *cepl-context*)))
 
-    ;; clear the default fbo
-    (clear)
-
-    ;; render ALL THE *THINGS*
-    (upload-uniforms-for-cam *current-camera*)
-
-    (loop :for thing :in *things* :do
-       (update thing delta)
-       (draw thing))
-
     (blit-noise)
 
     (update-particles delta)
 
-    ;; (clear)
-    ;; (draw-tex-tr *vector-field-sampler*)
-    ;; (draw-tex-tr (slot-value *particles* 'dst-sampler))
+    ;;(clear)
+    ;; (draw-tex-tr *vector-field-sampler*
+    ;;              :color-scale (v! 1 1 0 0))
+    ;; (draw-tex-tl (src-sampler *particles*)
+    ;;              :color-scale (v! 1 0 0 0))
+    (upload-uniforms-for-cam *current-camera*)
+    (loop :for thing :in *things* :do
+       (update thing delta)
+       (draw thing))
 
     ;; display what we have drawn
     (swap)

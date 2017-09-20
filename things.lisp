@@ -51,6 +51,9 @@
 ;;------------------------------------------------------------
 ;; Foo!
 
+(defvar *particle-blend-params*
+  (make-blending-params))
+
 (defclass ball (thing)
   ((stream :initform (sphere 1f0))
    (sampler :initform (tex "dirt.jpg"))))
@@ -62,22 +65,26 @@
   nil)
 
 (defmethod draw ((thing ball))
-  (let ((camera *camera*))
-    (with-instances 1000
-      (map-g #'some-pipeline (buf-stream thing)
-             :scale (scale thing)
-             :model->world (get-model->world-space thing)
-             :albedo (sampler thing)
-             :spec-map (specular-sampler thing)
-             :light-pos *light-pos*
-             :cam-pos (pos camera)
-             :now (now)
-             :world->view (get-world->view-space camera)
-             :view->clip (rtg-math.projection:perspective
-                          (x (viewport-resolution (current-viewport)))
-                          (y (viewport-resolution (current-viewport)))
-                          1f0
-                          400f0
-                          45f0)))))
+  (let ((camera *current-camera*)
+        (pdata (src-sampler *particles*)))
+    (with-blending *particle-blend-params*
+      (with-instances 1000
+        (map-g #'dpart-pipeline (buf-stream thing)
+               :scale 0.03
+               :model->world (get-model->world-space thing)
+               :albedo (sampler thing)
+               :spec-map (specular-sampler thing)
+               :light-pos *light-pos*
+               :cam-pos (pos camera)
+               :now (now)
+               :world->view (get-world->view-space camera)
+               :view->clip (rtg-math.projection:perspective
+                            (x (viewport-resolution (current-viewport)))
+                            (y (viewport-resolution (current-viewport)))
+                            1f0
+                            400f0
+                            45f0)
+               :particles pdata
+               :ptex-size (v! (dimensions (sampler-texture pdata))))))))
 
 ;;------------------------------------------------------------
