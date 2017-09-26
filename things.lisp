@@ -28,8 +28,8 @@
   (m4:* (m4:translation (pos thing))
         (q:to-mat4 (rot thing))))
 
-(defmethod draw ((thing thing))
-  (map-g #'some-pipeline (buf-stream thing)
+(defmethod draw ((pipeline function) (thing thing))
+  (map-g pipeline (buf-stream thing)
          :scale (scale thing)
          :model->world (get-model->world-space thing)
          :albedo (sampler thing)

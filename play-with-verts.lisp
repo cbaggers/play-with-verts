@@ -25,11 +25,11 @@
     (clear)
 
     ;; render ALL THE *THINGS*
-    (upload-uniforms-for-cam *current-camera*)
+    (upload-uniforms-for-cam #'some-pipeline *current-camera*)
 
     (loop :for thing :in *things* :do
        (update thing delta)
-       (draw thing))
+       (draw #'some-pipeline thing))
 
     ;; display what we have drawn
     (swap)

@@ -10,7 +10,9 @@
    (near :initform 1f0
          :accessor near)
    (far :initform 400f0
-         :accessor far)))
+        :accessor far)
+   (frame-size :initform nil
+               :accessor frame-size)))
 
 (defclass orthographic-camera (camera) ())
 
@@ -55,19 +57,23 @@
         (rot cam) (v! 0.97 -0.20 -0.01 0.0))
   cam)
 
-(defmethod projection ((camera perspective-camera) width height)
-  (rtg-math.projection:perspective
-   width
-   height
-   (near camera)
-   (far camera)
-   (fov camera)))
+(defmethod projection ((camera perspective-camera))
+  (let ((fs (or (frame-size camera)
+                (viewport-resolution (current-viewport)))))
+    (rtg-math.projection:perspective
+     (x fs)
+     (y fs)
+     (near camera)
+     (far camera)
+     (fov camera))))
 
-(defmethod projection ((camera orthographic-camera) width height)
-  (rtg-math.projection:orthographic
-   width
-   height
-   (near camera)
-   (far camera)))
+(defmethod projection ((camera orthographic-camera))
+  (let ((fs (or (frame-size camera)
+                (viewport-resolution (current-viewport)))))
+    (rtg-math.projection:orthographic
+     (x fs)
+     (y fs)
+     (near camera)
+     (far camera))))
 
 ;;------------------------------------------------------------

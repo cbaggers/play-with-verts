@@ -92,17 +92,13 @@
 
 ;;------------------------------------------------------------
 
-(defun upload-uniforms-for-cam (camera)
-  (map-g #'some-pipeline nil
+(defun upload-uniforms-for-cam (pipeline camera)
+  (declare (type function pipeline))
+  (map-g pipeline nil
          :light-pos *light-pos*
          :cam-pos (pos camera)
          :now (now)
          :world->view (get-world->view-space camera)
-         :view->clip (rtg-math.projection:perspective
-                      (x (viewport-resolution (current-viewport)))
-                      (y (viewport-resolution (current-viewport)))
-                      1f0
-                      400f0
-                      45f0)))
+         :view->clip (projection camera)))
 
 ;;------------------------------------------------------------
