@@ -52,11 +52,19 @@
   (let* ((proj-coords (/ (s~ pos-in-light-space :xyz)
                          (w pos-in-light-space)))
          (proj-coords (+ (* proj-coords 0.5) (vec3 0.5)))
-         (light-depth (x (texture light-sampler (s~ proj-coords :xy))))
          (our-depth (z proj-coords))
-         (factor (if (> (- our-depth 0.005) light-depth) 0f0 1f0))
-         (factor (if (> our-depth 1f0) 0f0 factor)))
-    factor))
+         (shadow 0f0)
+         (bias 0.005)
+         (texel-size (/ (vec2 1f0) (texture-size light-sampler 0)))
+         (uv (s~ proj-coords :xy)))
+
+    (for (x -1) (<= x 1) (++ x)
+         (for (y -1) (<= y 1) (++ y)
+              (let* ((uv+offset (+ uv (* (v! x y) texel-size)))
+                     (pcf-depth (x (texture light-sampler uv+offset))))
+                (incf shadow (if (> (- our-depth bias) pcf-depth) 0f0 1f0)))))
+
+    (/ shadow 9f0)))
 
 ;; We will use this function as our fragment shader
 (defun-g some-frag-stage ((frag-pos :vec3)
@@ -116,7 +124,8 @@
                            &uniform (light-pos :vec3)
                            (cam-pos :vec3)
                            (albedo :sampler-2d)
-                           (spec-map :sampler-2d))
+                           (spec-map :sampler-2d)
+                           (light-sampler :sampler-2d))
   (values))
 
 ;; The pipeline itself, we map-g over this to draw stuff
@@ -139,6 +148,7 @@
          :world->view (get-world->view-space camera)
          :view->clip (projection camera)
          :world->light (get-world->view-space *camera-1*)
-         :light->clip (projection *camera-1*)))
+         :light->clip (projection *camera-1*)
+         :light-sampler *light-sampler*))
 
 ;;------------------------------------------------------------

@@ -42,7 +42,7 @@
 
     (render-all-the-things #'some-pipeline *camera* delta)
 
-    (draw-tex-br *light-sampler*)
+    ;;(draw-tex-br *light-sampler*)
 
     ;; display what we have drawn
     (swap)
