@@ -62,6 +62,19 @@
     box))
 
 (defmethod update ((thing box) dt)
-  (setf (y (pos thing)) (+ 9f0 (* 5f0 (sin (+ (position thing *things*) (now)))))))
+  (setf (y (pos thing)) (+ 9f0 (* 5f0 (sin (+ (position thing *things*) (* 0.1 (now))))))))
 
 ;;------------------------------------------------------------
+
+(defclass sphere (thing)
+  ((stream :initform (sphere 3))
+   (sampler :initform (tex "dirt.jpg"))))
+
+(defun make-sphere (&optional (pos (v! 0 0 0)))
+  (let ((sphere (make-instance 'sphere)))
+    (setf (pos sphere) pos)
+    (push sphere *things*)
+    sphere))
+
+(defmethod update ((thing sphere) dt)
+  (setf (y (pos thing)) (+ 9f0 (* 5f0 (sin (+ (position thing *things*) (* 0.1 (now))))))))
