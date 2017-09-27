@@ -36,7 +36,7 @@
 
          ;;
          (pos-in-light-space
-          (* light->clip (* world->view world-pos))))
+          (* light->clip (* world->light world-pos))))
 
     ;; return the clip-space position and the 3 other values
     ;; that will be passed to the fragment shader
@@ -54,7 +54,8 @@
          (proj-coords (+ (* proj-coords 0.5) (vec3 0.5)))
          (light-depth (x (texture light-sampler (s~ proj-coords :xy))))
          (our-depth (z proj-coords))
-         (factor (if (> our-depth light-depth) 0f0 1f0)))
+         (factor (if (> (- our-depth 0.005) light-depth) 0f0 1f0))
+         (factor (if (> our-depth 1f0) 0f0 factor)))
     factor))
 
 ;; We will use this function as our fragment shader

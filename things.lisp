@@ -62,6 +62,6 @@
     box))
 
 (defmethod update ((thing box) dt)
-  nil)
+  (setf (y (pos thing)) (+ 9f0 (* 5f0 (sin (+ (position thing *things*) (now)))))))
 
 ;;------------------------------------------------------------
