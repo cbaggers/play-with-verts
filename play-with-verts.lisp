@@ -6,7 +6,18 @@
 
 (defun reset ()
   (setf *things* nil)
-  (make-ground))
+  (make-ground)
+  (unless *light-fbo*
+    (setf *light-fbo*
+          (make-fbo `(:d :dimensions (1024 1024))))
+    (setf *light-sampler*
+          (sample (attachment-tex *light-fbo* :d)))))
+
+(defun render-all-the-things (pipeline camera delta)
+  (upload-uniforms-for-cam pipeline camera)
+  (loop :for thing :in *things* :do
+     (update thing delta)
+     (draw pipeline thing)))
 
 (defun game-step ()
   (let* ((now (get-internal-real-time))
@@ -21,15 +32,17 @@
     (setf (resolution (current-viewport))
           (surface-resolution (current-surface *cepl-context*)))
 
+    ;; render ALL THE *THINGS*
+    (with-fbo-bound (*light-fbo* :attachment-for-size :d)
+      (clear *light-fbo*)
+      (render-all-the-things #'light-pipeline *camera-1* delta))
+
     ;; clear the default fbo
     (clear)
 
-    ;; render ALL THE *THINGS*
-    (upload-uniforms-for-cam #'some-pipeline *current-camera*)
+    (render-all-the-things #'some-pipeline *camera* delta)
 
-    (loop :for thing :in *things* :do
-       (update thing delta)
-       (draw #'some-pipeline thing))
+    (draw-tex-br *light-sampler*)
 
     ;; display what we have drawn
     (swap)

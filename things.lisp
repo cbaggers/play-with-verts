@@ -51,6 +51,17 @@
 ;;------------------------------------------------------------
 ;; Foo!
 
+(defclass box (thing)
+  ((stream :initform (box 2 2 2))
+   (sampler :initform (tex "dirt.jpg"))))
 
+(defun make-box (&optional (pos (v! 0 0 0)))
+  (let ((box (make-instance 'box)))
+    (setf (pos box) pos)
+    (push box *things*)
+    box))
+
+(defmethod update ((thing box) dt)
+  nil)
 
 ;;------------------------------------------------------------

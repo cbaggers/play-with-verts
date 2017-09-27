@@ -1,5 +1,8 @@
 (in-package #:play-with-verts)
 
+(defvar *light-fbo* nil)
+(defvar *light-sampler* nil)
+
 ;;------------------------------------------------------------
 
 ;; We will use this function as our vertex shader
@@ -8,7 +11,9 @@
                           (scale :float)
                           (model->world :mat4)
                           (world->view :mat4)
-                          (view->clip :mat4))
+                          (view->clip :mat4)
+                          (world->light :mat4)
+                          (light->clip :mat4))
   (let* (;; Unpack the data from our vert
          ;; (pos & normal are in model space)
          (pos (* (pos vert) scale))
@@ -27,7 +32,11 @@
          (view-pos (* world->view world-pos))
 
          ;; view space to clip space
-         (clip-pos (* view->clip view-pos)))
+         (clip-pos (* view->clip view-pos))
+
+         ;;
+         (pos-in-light-space
+          (* light->clip (* world->view world-pos))))
 
     ;; return the clip-space position and the 3 other values
     ;; that will be passed to the fragment shader
@@ -35,16 +44,29 @@
      clip-pos
      (s~ world-pos :xyz)
      world-norm
-     uv)))
+     uv
+     pos-in-light-space)))
+
+(defun-g shadow-factor ((light-sampler :sampler-2d)
+                        (pos-in-light-space :vec4))
+  (let* ((proj-coords (/ (s~ pos-in-light-space :xyz)
+                         (w pos-in-light-space)))
+         (proj-coords (+ (* proj-coords 0.5) (vec3 0.5)))
+         (light-depth (x (texture light-sampler (s~ proj-coords :xy))))
+         (our-depth (z proj-coords))
+         (factor (if (> our-depth light-depth) 0f0 1f0)))
+    factor))
 
 ;; We will use this function as our fragment shader
 (defun-g some-frag-stage ((frag-pos :vec3)
                           (frag-normal :vec3)
                           (uv :vec2)
+                          (pos-in-light-space :vec4)
                           &uniform (light-pos :vec3)
                           (cam-pos :vec3)
                           (albedo :sampler-2d)
-                          (spec-map :sampler-2d))
+                          (spec-map :sampler-2d)
+                          (light-sampler :sampler-2d))
   (let* (;; we will multiply with color with the light-amount
          ;; to get our final color
          (object-color (texture albedo uv))
@@ -74,21 +96,36 @@
          (specular (* (expt (saturate (dot reflection dir-to-cam))
                             32f0)
                       specular-power))
+         (shadow-factor (shadow-factor light-sampler pos-in-light-space))
 
          ;; The final light amount is the sum of the different components
          (light-amount (+ ambient
-                          diffuse
-                          ;;specular
-                          )))
+                          (* (+ diffuse
+                                specular)
+                             shadow-factor))))
 
     ;; And we multipy with the object color. This means that 0 light results
     ;; in no color, and 1 light results in full color. Cool!
     (* object-color light-amount)))
 
+(defun-g light-frag-stage ((frag-pos :vec3)
+                           (frag-normal :vec3)
+                           (uv :vec2)
+                           (pos-in-light-space :vec4)
+                           &uniform (light-pos :vec3)
+                           (cam-pos :vec3)
+                           (albedo :sampler-2d)
+                           (spec-map :sampler-2d))
+  (values))
+
 ;; The pipeline itself, we map-g over this to draw stuff
 (defpipeline-g some-pipeline ()
   (some-vert-stage g-pnt)
-  (some-frag-stage :vec3 :vec3 :vec2))
+  (some-frag-stage :vec3 :vec3 :vec2 :vec4))
+
+(defpipeline-g light-pipeline ()
+  (some-vert-stage g-pnt)
+  (light-frag-stage :vec3 :vec3 :vec2 :vec4))
 
 ;;------------------------------------------------------------
 
@@ -99,6 +136,8 @@
          :cam-pos (pos camera)
          :now (now)
          :world->view (get-world->view-space camera)
-         :view->clip (projection camera)))
+         :view->clip (projection camera)
+         :world->light (get-world->view-space *camera-1*)
+         :light->clip (projection *camera-1*)))
 
 ;;------------------------------------------------------------
