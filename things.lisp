@@ -35,15 +35,38 @@
          :albedo (sampler thing)
          :spec-map (specular-sampler thing)))
 
+(defclass phys-thing (thing)
+  ((phys-body :accessor phys-body)))
+
+(defmethod update ((thing phys-thing) dt)
+  (setf (pos thing)
+        (body-position (phys-body thing)))
+  (let ((mat (body-matrix4 (phys-body thing))))
+    (setf (rot thing)
+          (q:from-mat3 (m4:to-mat3 mat)))))
+
+(defun apply-gravity (body timestep)
+  (declare (ignore timestep))
+  (let ((mass (body-mass body)))
+    (setf (body-force body) (v! 0f0 (* -9.8 mass) 0f0 0f0))))
+
 ;;------------------------------------------------------------
 ;; Floor
 
-(defclass ground (thing)
+(defclass ground (phys-thing)
   ((stream :initform (box 40 1 40))
    (sampler :initform (tex "floor.jpg"))))
 
 (defun make-ground ()
-  (push (make-instance 'ground) *things*))
+  (with-geometry (geom (make-box-geometry
+                        *world* :dimensions (v! 40 1 40)))
+    (let* ((obj (make-instance 'ground))
+           (body (make-body *world* geom :linear-damping 0f0
+                            :mass 0f0)))
+      (setf (body-matrix4 body) (m4:translation (pos obj)))
+      (setf (phys-body obj) body)
+      (push obj *things*)
+      obj)))
 
 (defmethod update ((thing ground) dt)
   nil)
@@ -51,30 +74,51 @@
 ;;------------------------------------------------------------
 ;; Foo!
 
-(defclass box (thing)
+(defclass box (phys-thing)
   ((stream :initform (box 2 2 2))
    (sampler :initform (tex "scratched.jpg"))))
 
 (defun make-box (&optional (pos (v! 0 0 0)))
-  (let ((box (make-instance 'box)))
-    (setf (pos box) pos)
-    (push box *things*)
-    box))
-
-(defmethod update ((thing box) dt)
-  (setf (y (pos thing)) (+ 9f0 (* 5f0 (sin (+ (position thing *things*) (* 0.1 (now))))))))
+  (with-geometry (geom (make-box-geometry *world* :dimensions (v! 2 2 2)))
+    (let* ((box (make-instance 'box))
+           (body (make-body *world* geom :mass 0.1f0)))
+      (setf (pos box) pos)
+      (setf (body-force-torque-callback body) #'apply-gravity)
+      (setf (body-matrix4 body) (m4:translation (pos box)))
+      (setf (phys-body box) body)
+      (push box *things*)
+      box)))
 
 ;;------------------------------------------------------------
 
-(defclass sphere (thing)
+(defclass sphere (phys-thing)
   ((stream :initform (sphere 3))
    (sampler :initform (tex "blue.jpg"))))
 
 (defun make-sphere (&optional (pos (v! 0 0 0)))
-  (let ((sphere (make-instance 'sphere)))
-    (setf (pos sphere) pos)
-    (push sphere *things*)
-    sphere))
+  (with-geometry (geom (make-sphere-geometry *world* :radius 3f0))
+    (let* ((sphere (make-instance 'sphere))
+           (body (make-body *world* geom :mass 1f0)))
+      (setf (pos sphere) pos)
+      (setf (body-force-torque-callback body) #'apply-gravity)
+      (setf (body-matrix4 body) (m4:translation (pos sphere)))
+      (setf (phys-body sphere) body)
+      (push sphere *things*)
+      sphere)))
 
-(defmethod update ((thing sphere) dt)
-  (setf (y (pos thing)) (+ 9f0 (* 5f0 (sin (+ (position thing *things*) (* 0.1 (now))))))))
+;;------------------------------------------------------------
+
+(defvar *lazer* nil)
+
+(defclass lazer (thing)
+  ((stream :initform (cylinder 0.1f0 10f0))
+   (sampler :initform (tex "blue.jpg"))))
+
+(defun make-lazer ()
+  (let* ((lazer (make-instance 'lazer)))
+    (push lazer *things*)
+    (setf *lazer* lazer)
+    lazer))
+
+(defmethod update ((thing lazer) delta)
+  )

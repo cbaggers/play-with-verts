@@ -6,6 +6,9 @@
 
 (defun reset ()
   (setf *things* nil)
+  ;;NewtonDestroyAllBodies
+  (when *world*
+    (world-destroy-all-bodies *world*))
   (make-ground)
   (unless *light-fbo*
     (setf *light-fbo*
@@ -24,11 +27,19 @@
      (update thing delta)
      (draw pipeline thing)))
 
+(defvar *world* (make-world))
+
+(defparameter *phys-step* (make-stepper (seconds 0.01)))
+
 (defun game-step ()
   (let* ((now (get-internal-real-time))
          (delta (* (- now *last-time*) 0.001))
          (delta (if (> delta 0.16) 0.00001 delta)))
     (setf *last-time* now)
+
+    ;; run physics
+    (loop :while (funcall *phys-step*) :do
+       (world-step *world* 0.01))
 
     ;; update camera
     (update *current-camera* delta)
@@ -47,7 +58,7 @@
 
     (render-all-the-things #'some-pipeline *camera* delta)
 
-    (draw-tex-br *light-sampler*)
+    ;;(draw-tex-br *light-sampler*)
 
     ;; display what we have drawn
     (swap)

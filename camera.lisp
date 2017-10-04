@@ -50,7 +50,9 @@
              (q:* (rot camera)
                   (q:normalize
                    (q:* (q:from-axis-angle (v! 1 0 0) (- (y move)))
-                        (q:from-axis-angle (v! 0 1 0) (- (x move)))))))))))
+                        (q:from-axis-angle (v! 0 1 0) (- (x move))))))))))
+  (when (mouse-button (mouse) mouse.right)
+    (place-lazer)))
 
 (defun reset-camera (&optional (cam *current-camera*))
   (setf (pos cam) (v! -0.43 25.33 43.20)
@@ -82,3 +84,43 @@
   (setf (pos *camera-1*) (v! (pos *camera*))
         (rot *camera-1*) (v! (rot *camera*)))
   *camera-1*)
+
+;;------------------------------------------------------------
+
+(defun bodged-ray (camera mpos)
+  (let* ((fov (fov camera))
+         (vsize (viewport-resolution (current-viewport)))
+         (x (/ (x mpos) (x vsize)))
+         (y (/ (y mpos) (y vsize)))
+         (nx (- (- (* x 2f0) 1f0)))
+         (ny (- (- (* y 2f0) 1f0)))
+         (rot (q:normalize
+               (q:* (rot camera)
+                     (q:* (q:from-axis-angle (v! 0 0 1)
+                                             (* nx (radians fov)))
+                          (q:from-axis-angle (v! 1 0 0)
+                                             (* ny (radians fov))))))))
+    rot))
+
+(defun place-lazer ()
+  (unless *lazer*
+    (make-lazer))
+  (let* ((rot (bodged-ray *camera* (mouse-pos (mouse 0))))
+         (dir (q:to-direction rot)))
+    (setf (rot *lazer*)
+          (q:* (q:from-axis-angle (v! 1 0 0) (radians -90f0))
+               rot))
+    (setf (pos *lazer*)
+          (v3:+ (v! (pos *camera*))
+                (v! 0 -1 0)))
+    (let ((hit nil))
+      (world-ray-cast *world*
+                      (pos *camera*)
+                      (v3:+ (pos *camera*)
+                            (v3:*s dir 50f0))
+                      (lambda (body geometry a b c d)
+                        (declare (ignore geometry a b c d))
+                        (setf hit body)
+                        0f0))
+      (when (and hit (> (body-mass hit) 0f0))
+        (body-add-impluse hit (v! 0 5 0))))))
