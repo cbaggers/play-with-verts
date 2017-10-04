@@ -77,3 +77,8 @@
      (far camera))))
 
 ;;------------------------------------------------------------
+
+(defun set-light-cam-to-cam ()
+  (setf (pos *camera-1*) (v! (pos *camera*))
+        (rot *camera-1*) (v! (rot *camera*)))
+  *camera-1*)

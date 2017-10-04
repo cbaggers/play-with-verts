@@ -40,7 +40,7 @@
 
 (defclass ground (thing)
   ((stream :initform (box 40 1 40))
-   (sampler :initform (tex "dirt.jpg"))))
+   (sampler :initform (tex "floor.jpg"))))
 
 (defun make-ground ()
   (push (make-instance 'ground) *things*))
@@ -53,7 +53,7 @@
 
 (defclass box (thing)
   ((stream :initform (box 2 2 2))
-   (sampler :initform (tex "dirt.jpg"))))
+   (sampler :initform (tex "scratched.jpg"))))
 
 (defun make-box (&optional (pos (v! 0 0 0)))
   (let ((box (make-instance 'box)))
@@ -68,7 +68,7 @@
 
 (defclass sphere (thing)
   ((stream :initform (sphere 3))
-   (sampler :initform (tex "dirt.jpg"))))
+   (sampler :initform (tex "blue.jpg"))))
 
 (defun make-sphere (&optional (pos (v! 0 0 0)))
   (let ((sphere (make-instance 'sphere)))

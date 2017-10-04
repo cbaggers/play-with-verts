@@ -11,7 +11,12 @@
     (setf *light-fbo*
           (make-fbo `(:d :dimensions (1024 1024))))
     (setf *light-sampler*
-          (sample (attachment-tex *light-fbo* :d)))))
+          (sample (attachment-tex *light-fbo* :d)))
+    (setf (frame-size *camera-1*)
+          (v:* (viewport-resolution (current-viewport))
+               0.1f0))
+    (setf (pos *camera-1*) (v! -17.38 37.5 20.15)
+          (rot *camera-1*) (v! -0.82 0.32 0.45 0.11))))
 
 (defun render-all-the-things (pipeline camera delta)
   (upload-uniforms-for-cam pipeline camera)
@@ -42,7 +47,7 @@
 
     (render-all-the-things #'some-pipeline *camera* delta)
 
-    ;;(draw-tex-br *light-sampler*)
+    (draw-tex-br *light-sampler*)
 
     ;; display what we have drawn
     (swap)
