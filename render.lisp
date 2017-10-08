@@ -35,3 +35,72 @@
   (some-frag-stage :vec3 :vec2))
 
 ;;------------------------------------------------------------
+
+(defun-g unit-square-to-ngon ((p :vec2) (n :float) (amount :float))
+  (let* ((a (- (* (x p) 2.0) 1.0))
+         (b (- (* (y p) 2.0) 1.0))
+         ((r :float))
+         ((theta :float)))
+    ;; Which quadrant of the square are we in
+    (if (> a (- b))
+        (if (> a b)
+            (progn
+              (setf r a)
+              (setf theta (* (/ pi-f 4.0) (/ b a))))
+            (progn
+              (setf r b)
+              (setf theta (* (/ pi-f 4.0) (- 2.0 (/ a b))))))
+        (if (< a b)
+            (progn
+              (setf r (- a))
+              (setf theta (* (/ pi-f 4.0) (+ 4.0 (/ b a)))))
+            (progn
+              (setf r (- b))
+              (if (/= b 0.0)
+                  (setf theta (* (/ pi-f 4.0) (- 6.0 (/ a b))))
+                  (setf theta 0.0)))))
+    (let* ((circle-radius r))
+      (setf r (* r
+                 (mix 1.0
+                      (/ (cos (/ pi-f n))
+                         (cos
+                          (- theta
+                             (* (/ (* 2.0 pi-f) n)
+                                (floor (/ (+ (* n theta) pi-f) (* 2.0 pi-f)))))))
+                      amount)))
+      ;; This is just so that the shape isn't aligned to an axis,
+      ;; which looks a bit nicer
+      (incf theta 0.6)
+      (let* ((u (* r (cos theta))) (v (* r (sin theta))))
+        (v3! u v circle-radius)))))
+
+
+(defun-g quad-passthrough ((vert :vec2))
+  (values
+   (v! vert 0 1)
+   (+ (* vert 0.5) (vec2 0.5))))
+
+(defun-g some-blur ((uv :vec2)
+                    &uniform
+                    (sam :sampler-2d))
+  (let* ((num-of-sides 3)
+         (amount 1)
+         (scale 0.01)
+         (size 7)
+         ;;
+         (size-v2 (vec2 size))
+         (accum (v! 0 0 0 0)))
+    (for (y 0) (< y 7) (++ y)
+         (for (x 0) (< x 7) (++ x)
+              (let* ((unit-vec (/ (v! x y) size-v2))
+                     (ngon-uv (s~ (unit-square-to-ngon
+                                   unit-vec num-of-sides amount)
+                                  :xy))
+                     (ngon-uv (* ngon-uv scale))
+                     (sample-pos (+ uv ngon-uv)))
+                (incf accum (/ (texture sam sample-pos) (* size size))))))
+    accum))
+
+(defpipeline-g first-blur ()
+  :vertex (quad-passthrough :vec2)
+  :fragment (some-blur :vec2))

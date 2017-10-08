@@ -2,6 +2,9 @@
 
 ;;------------------------------------------------------------
 
+(defvar *some-fbo* nil)
+(defvar *some-sampler* nil)
+
 (defvar *last-time* (get-internal-real-time))
 
 (defun reset ()
@@ -24,10 +27,15 @@
           (surface-resolution (current-surface *cepl-context*)))
 
     ;; draw stuff
+    (with-fbo-bound (*some-fbo*)
+      (clear-fbo *some-fbo*)
+      (loop :for thing :in *things* :do
+         (update thing delta)
+         (draw #'some-pipeline *current-camera* thing)))
+
     (clear)
-    (loop :for thing :in *things* :do
-       (update thing delta)
-       (draw #'some-pipeline *current-camera* thing))
+    (map-g #'first-blur (get-quad-stream-v2) :sam *some-sampler*)
+    ;;(draw-tex *some-sampler*)
 
     ;; display what we have drawn
     (swap)
