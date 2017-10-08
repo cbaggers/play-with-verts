@@ -7,10 +7,8 @@
 (defun reset ()
   (setf *things* nil)
   (make-ground)
-  (loop :for i :below 10 :do
-     (make-box))
-  (loop :for i :below 10 :do
-     (make-ball)))
+  (dotimes (x 10) (make-box))
+  (dotimes (x 10) (make-ball)))
 
 (defun game-step ()
   (let* ((now (get-internal-real-time))
