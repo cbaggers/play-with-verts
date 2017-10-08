@@ -27,8 +27,8 @@
 (defmethod draw ((pipeline function) (camera camera) (thing thing))
   (map-g pipeline (buf-stream thing)
          :model->world (get-model->world-space thing)
-         :world->clip (m4:* (projection camera)
-                            (get-world->view-space camera))
+         :world->view (get-world->view-space camera)
+         :view->clip (projection camera)
          :albedo (sampler thing)))
 
 (defmethod update ((thing thing) dt) nil)
