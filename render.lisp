@@ -83,16 +83,19 @@
 (defun-g some-blur ((uv :vec2)
                     &uniform
                     (sam :sampler-2d))
-  (let* ((num-of-sides 3)
+  (let* ((num-of-sides 6)
          (amount 1)
-         (scale 0.01)
+         (scale 0.02)
          (size 7)
          ;;
          (size-v2 (vec2 size))
          (accum (v! 0 0 0 0)))
-    (for (y 0) (< y 7) (++ y)
-         (for (x 0) (< x 7) (++ x)
-              (let* ((unit-vec (/ (v! x y) size-v2))
+    ;; make a square of samples..
+    (for (y 0) (< y size) (++ y)
+         (for (x 0) (< x size) (++ x)
+              ;; ..morphed into shape
+              (let* ((size-inclusive (- size-v2 (vec2 1)))
+                     (unit-vec (/ (v! x y) size-inclusive))
                      (ngon-uv (s~ (unit-square-to-ngon
                                    unit-vec num-of-sides amount)
                                   :xy))
@@ -101,6 +104,43 @@
                 (incf accum (/ (texture sam sample-pos) (* size size))))))
     accum))
 
+(defun-g fill-pass ((uv :vec2)
+                    &uniform
+                    (sam :sampler-2d))
+  (let* ((num-of-sides 6)
+         (amount 1)
+         (scale 0.01)
+         (size 4)
+         ;;
+         (size-v2 (vec2 size))
+         (accum (texture sam uv)))
+    ;; make a square of samples..
+    (for (y 0) (< y size) (++ y)
+         (for (x 0) (< x size) (++ x)
+              ;; ..morphed into shape
+              (let* ((size-inclusive (- size-v2 (vec2 1)))
+                     (unit-vec (/ (v! x y) size-inclusive))
+                     (ngon-uv (s~ (unit-square-to-ngon
+                                   unit-vec num-of-sides amount)
+                                  :xy))
+                     (ngon-uv (* ngon-uv scale))
+                     (sample-pos (+ uv ngon-uv)))
+                (setf accum (max accum (texture sam sample-pos))))))
+    accum))
+
+(defun-g frag-passthough ((uv :vec2)
+                          &uniform
+                          (sam :sampler-2d))
+  (texture sam uv))
+
 (defpipeline-g first-blur ()
   :vertex (quad-passthrough :vec2)
   :fragment (some-blur :vec2))
+
+(defpipeline-g fill-blur ()
+  :vertex (quad-passthrough :vec2)
+  :fragment (fill-pass :vec2))
+
+(defpipeline-g blit ()
+  :vertex (quad-passthrough :vec2)
+  :fragment (frag-passthough :vec2))

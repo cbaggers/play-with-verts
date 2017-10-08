@@ -41,6 +41,20 @@
         (%rtarget-depth-sampler rt)
         (aref (%rtarget-col-samplers rt) name))))
 
+(defun rt-sampler-front (rt name)
+  (let ((rt (render-target-front rt)))
+    (assert rt)
+    (if (eq name :d)
+        (%rtarget-depth-sampler rt)
+        (aref (%rtarget-col-samplers rt) name))))
+
+(defun rt-sampler-back (rt name)
+  (let ((rt (render-target-back rt)))
+    (assert rt)
+    (if (eq name :d)
+        (%rtarget-depth-sampler rt)
+        (aref (%rtarget-col-samplers rt) name))))
+
 (defun rt-fbo (rt)
   (let ((rt (render-target-front rt)))
     (assert rt)
