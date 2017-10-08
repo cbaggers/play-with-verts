@@ -6,7 +6,11 @@
 
 (defun reset ()
   (setf *things* nil)
-  (make-ground))
+  (make-ground)
+  (loop :for i :below 10 :do
+     (make-box))
+  (loop :for i :below 10 :do
+     (make-ball)))
 
 (defun game-step ()
   (let* ((now (get-internal-real-time))
@@ -21,15 +25,11 @@
     (setf (resolution (current-viewport))
           (surface-resolution (current-surface *cepl-context*)))
 
-    ;; clear the default fbo
+    ;; draw stuff
     (clear)
-
-    ;; render ALL THE *THINGS*
-    (upload-uniforms-for-cam #'some-pipeline *current-camera*)
-
     (loop :for thing :in *things* :do
        (update thing delta)
-       (draw #'some-pipeline thing))
+       (draw #'some-pipeline *current-camera* thing))
 
     ;; display what we have drawn
     (swap)
