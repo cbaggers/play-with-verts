@@ -31,6 +31,8 @@
        (update thing delta)
        (draw #'some-pipeline *current-camera* thing))
 
+    (radial-blur *wat-sampler*)
+
     ;; display what we have drawn
     (swap)
     (decay-events)))
