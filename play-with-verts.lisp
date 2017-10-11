@@ -37,9 +37,9 @@
          (draw #'some-pipeline *current-camera* thing)))
 
     (clear)
-    (radial-blur2 *scene-sampler*)
+    (radial-blur *scene-sampler*)
 
-    (draw-tex *scene-depth-sampler*)
+    ;;(draw-tex *scene-sampler* :scale 0.3)
 
     ;; display what we have drawn
     (swap)
