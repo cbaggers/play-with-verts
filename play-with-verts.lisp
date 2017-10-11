@@ -11,7 +11,8 @@
     (setf *light-fbo*
           (make-fbo `(:d :dimensions (1024 1024))))
     (setf *light-sampler*
-          (sample (attachment-tex *light-fbo* :d)))))
+          (sample (attachment-tex *light-fbo* :d)))
+    (setf (frame-size *camera-1*) (v! 100 100))))
 
 (defun render-all-the-things (pipeline camera delta)
   (upload-uniforms-for-cam pipeline camera)
