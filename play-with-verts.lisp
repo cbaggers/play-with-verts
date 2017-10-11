@@ -4,6 +4,10 @@
 
 (defvar *last-time* (get-internal-real-time))
 
+(defvar *scene-fbo* nil)
+(defvar *scene-sampler* nil)
+(defvar *scene-depth-sampler* nil)
+
 (defun reset ()
   (setf *things* nil)
   (make-ground)
@@ -26,12 +30,16 @@
           (surface-resolution (current-surface *cepl-context*)))
 
     ;; draw stuff
-    (clear)
-    (loop :for thing :in *things* :do
-       (update thing delta)
-       (draw #'some-pipeline *current-camera* thing))
+    (with-fbo-bound (*scene-fbo*)
+      (clear-fbo *scene-fbo*)
+      (loop :for thing :in *things* :do
+         (update thing delta)
+         (draw #'some-pipeline *current-camera* thing)))
 
-    (radial-blur *wat-sampler*)
+    (clear)
+    (radial-blur2 *scene-sampler*)
+
+    (draw-tex *scene-depth-sampler*)
 
     ;; display what we have drawn
     (swap)
