@@ -10,8 +10,5 @@
                :sdl2-game-controller-db)
   :components ((:file "package")
                (:file "utils")
-               (:file "render")
                (:file "assets")
-               (:file "things")
-               (:file "camera")
                (:file "play-with-verts")))
