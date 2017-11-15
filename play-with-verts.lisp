@@ -3,9 +3,11 @@
 ;;------------------------------------------------------------
 
 (defvar *some-sampler* nil)
+(defvar *bs* nil)
 
 (defun reset ()
-  (setf *some-sampler* (tex "wat0.png")))
+  (setf *some-sampler* (tex "wat0.png"))
+  (setf *bs* (make-buffer-stream nil :primitive :points)))
 
 (defun-g goodluck-f ((uv :vec2) &uniform (sam :sampler-2d))
   (texture sam uv))
