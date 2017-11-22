@@ -61,7 +61,7 @@
          (pull (/ (* (normalize dir)
                      grav)
                   dist)))
-    (+ vel (* pull 0.05))))
+    (+ (* vel 0.999) (* pull 0.1))))
 
 (defun-g update-particle ((data pdata)
                           &uniform
@@ -84,16 +84,21 @@
   :vertex (update-particle pdata))
 
 (defun update-particle-state (src-stream dst-tfs)
-  (with-transform-feedback (dst-tfs)
-    (map-g #'update-particle-pline src-stream
-           :target0 (v! 100 100 100)
-           :target1 (v! -80 20 -100))))
+  (let* ((factor (* (now) 1))
+         (dist 80)
+         (vec (v! (* dist (sin factor))
+                  0
+                  (* dist (cos factor)))))
+    (with-transform-feedback (dst-tfs)
+      (map-g #'update-particle-pline src-stream
+             :target0 vec
+             :target1 (v3:negate vec)))))
 
 ;;------------------------------------------------------------
 
 (defun reset-particles ()
-  (let ((count 50000))
-    (unless *pbuffer-src*
+  (let ((count 64000))
+    (progn;;unless *pbuffer-src*
       (setf *pbuffer-src* (make-gpu-array nil :dimensions count
                                           :element-type 'pdata)
             *pbuffer-dst* (make-gpu-array nil :dimensions count

@@ -61,12 +61,7 @@
     (setf *ball* ball)))
 
 (defmethod update ((thing ball) dt)
-  ;; (let ((factor (* (now) 0.5))
-  ;;       (dist 50))
-  ;;   (setf (pos thing)
-  ;;         (v! (* dist (sin factor))
-  ;;             0
-  ;;             (* dist (cos factor)))))
+
   )
 
 ;;------------------------------------------------------------
