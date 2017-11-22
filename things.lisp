@@ -22,8 +22,6 @@
    (scale
     :initarg :scale :initform 1f0 :accessor scale)))
 
-(defvar *things* nil)
-
 (defmethod get-model->world-space ((thing thing))
   (m4:* (m4:translation (pos thing))
         (q:to-mat4 (rot thing))))
@@ -38,12 +36,15 @@
 ;;------------------------------------------------------------
 ;; Floor
 
+(defvar *ground* nil)
+
 (defclass ground (thing)
   ((stream :initform (box 40 1 40))
    (sampler :initform (tex "dirt.jpg"))))
 
 (defun make-ground ()
-  (push (make-instance 'ground) *things*))
+  (let ((ground (make-instance 'ground)))
+    (setf *ground* ground)))
 
 (defmethod update ((thing ground) dt)
   nil)
