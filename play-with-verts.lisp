@@ -23,12 +23,17 @@
     ;; clear the default fbo
     (clear)
 
+    (update-particle-state *stream-src* *tfs-dst*)
+
     ;; rendering time
     (upload-uniforms-for-cam #'some-pipeline *current-camera*)
     (draw #'some-pipeline *ground*)
+    (with-instances (first (dimensions *pbuffer-src*))
+      (draw #'some-pipeline *particle*))
 
     ;; display what we have drawn
     (swap)
+    (particle-swap)
     (decay-events)))
 
 

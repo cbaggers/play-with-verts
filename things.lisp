@@ -52,6 +52,24 @@
 ;;------------------------------------------------------------
 ;; Foo!
 
+(defvar *particle* nil)
 
+(defclass particle (thing)
+  ((stream :initform (cone))
+   (sampler :initform (tex "cone.png"))))
+
+(defun make-particle ()
+  (let ((particle (make-instance 'particle)))
+    (setf *particle* particle)))
+
+(defmethod update ((thing particle) dt)
+  nil)
+
+(defmethod draw ((pipeline function) (thing particle))
+  (map-g pipeline *inst-stream-src*
+         :scale (scale thing)
+         :model->world (get-model->world-space thing)
+         :albedo (sampler thing)
+         :spec-map (specular-sampler thing)))
 
 ;;------------------------------------------------------------

@@ -2,8 +2,17 @@
 
 ;;------------------------------------------------------------
 
+(defstruct-g pdata
+  (pos :vec3)
+  (vel :vec3)
+  (target :vec3)
+  (life :float))
+
+;;------------------------------------------------------------
+
 ;; We will use this function as our vertex shader
 (defun-g some-vert-stage ((vert g-pnt)
+                          (inst-data pdata)
                           &uniform (now :float)
                           (scale :float)
                           (model->world :mat4)
@@ -11,7 +20,8 @@
                           (view->clip :mat4))
   (let* (;; Unpack the data from our vert
          ;; (pos & normal are in model space)
-         (pos (* (pos vert) scale))
+         (pos (+ (* (pos vert) scale)
+                 (pdata-pos inst-data)))
          (normal (norm vert))
          (uv (tex vert))
 
@@ -87,7 +97,7 @@
 
 ;; The pipeline itself, we map-g over this to draw stuff
 (defpipeline-g some-pipeline ()
-  (some-vert-stage g-pnt)
+  (some-vert-stage g-pnt pdata)
   (some-frag-stage :vec3 :vec3 :vec2))
 
 ;;------------------------------------------------------------
