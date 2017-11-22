@@ -28,7 +28,9 @@
     ;; rendering time
     (upload-uniforms-for-cam #'some-pipeline *current-camera*)
     (draw #'some-pipeline *ground*)
-    (with-instances (first (dimensions *pbuffer-src*))
+    (update *ball* delta)
+    (draw #'some-pipeline *ball*)
+    (with-instances 10000;; (first (dimensions *pbuffer-src*))
       (draw #'some-pipeline *particle*))
 
     ;; display what we have drawn

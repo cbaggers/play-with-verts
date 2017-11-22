@@ -21,7 +21,7 @@
 
 (defun-g init-particle ((data pdata) &uniform (now :float))
   (let* ((id (* (+ gl-vertex-id now) 0.001))
-         (range 200f0)
+         (range 100f0)
          (hrange (/ range 2))
          (pos (v! (- (* (rand (vec2 (* 3 id)))
                         range)
@@ -30,12 +30,16 @@
                           range))
                   (- (* (rand (vec2 (* 5 id)))
                         range)
-                     hrange))))
+                     hrange)))
+         (target (v! 0 0 0))
+         (vel (* (cross (normalize (- target pos))
+                        (v! 0 1 0))
+                 0.1)))
     (values
      (v! 0 0 0 0)
      (:feedback pos)
-     (:feedback (v! 0 0 0))
-     (:feedback (v! 0 0 0))
+     (:feedback vel)
+     (:feedback target)
      (:feedback 0f0))))
 
 (defpipeline-g init-particle-pline (:points)
@@ -52,18 +56,22 @@
                            (vel :vec3)
                            (target :vec3))
   (let* ((dir (- target pos))
-         (dist (max (vec3 4) (length dir)))
-         (grav 2f0)
+         (dist (max (vec3 50) (length dir)))
+         (grav 12f0)
          (pull (/ (* (normalize dir)
                      grav)
                   dist)))
     (+ vel (* pull 0.05))))
 
-(defun-g update-particle ((data pdata))
+(defun-g update-particle ((data pdata)
+                          &uniform
+                          (target0 :vec3)
+                          (target1 :vec3))
   (let* ((pos (pdata-pos data))
          (vel (pdata-vel data))
          (target (pdata-target data))
-         (new-vel (new-particle-vel pos vel target))
+         (new-vel (new-particle-vel pos vel target0))
+         (new-vel (new-particle-vel pos new-vel target1))
          (new-pos (+ pos vel)))
     (values
      (v! 0 0 0 0)
@@ -77,7 +85,9 @@
 
 (defun update-particle-state (src-stream dst-tfs)
   (with-transform-feedback (dst-tfs)
-    (map-g #'update-particle-pline src-stream)))
+    (map-g #'update-particle-pline src-stream
+           :target0 (v! 100 100 100)
+           :target1 (v! -80 20 -100))))
 
 ;;------------------------------------------------------------
 
