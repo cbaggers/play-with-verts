@@ -17,19 +17,34 @@
   (setf *some-sampler* (tex "wat0.png"))
   (setf *bs* (make-buffer-stream nil :primitive :points)))
 
+(defun-g foo ((x :int) (y :int))
+  (* x y))
+
 (defun-g simple-vert ((vert :vec2))
   (values ((:feedback 0) (v! vert 0 1))
           (* (* (+ vert (v! 1 1)) 0.5)
              (v! 1 -1))
           ((:feedback 1) (v! 9 9))))
 
-(defun-g blit ((uv :vec2) (foo :vec2)
-               &uniform (sam :sampler-2d))
+(defparameter *factor* 1f0)
+
+(defun-g blit ((uv :vec2) &uniform (sam :sampler-2d))
   (texture sam uv))
+
+(defun-g tester ()
+  (+ 1 2))
+
+(defun-g tester ((x :int))
+  (+ 1 2 x))
+
+(defun-g tester ((x :float) &uniform (sam :sampler-2d))
+  (values (texture sam (* (v! 1 1) x))
+          1
+          1.2))
 
 (defpipeline-g blitter ()
   :vertex (simple-vert :vec2)
-  :fragment (blit :vec2 :vec2))
+  :fragment (blit :vec2))
 
 (defun game-step ()
   (setf (viewport-resolution (current-viewport))
