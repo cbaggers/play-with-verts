@@ -3,12 +3,15 @@
 ;;------------------------------------------------------------
 
 (defvar *some-sampler* nil)
+(defvar *bs* nil)
 
 (defun reset ()
-  (setf *some-sampler* (tex "wat0.png")))
+  (setf *bs* (make-buffer-stream nil))
+  (setf *some-sampler* (tex "capital-a.png"))
+  (setf (wrap *some-sampler*) :clamp-to-edge))
 
 (defun-g goodluck-f ((uv :vec2) &uniform (sam :sampler-2d))
-  (texture sam uv))
+  (texture sam (v! (x uv) (- 1 (y uv)))))
 
 (defpipeline-g nada (:points)
   :fragment (goodluck-f :vec2))
