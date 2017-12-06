@@ -23,7 +23,7 @@
 (defvar *albedo-sam* nil)
 
 (defun make-defer-fbo ()
-  (unless *first-pass-fbo*
+  (progn;;unless *first-pass-fbo*
     (let ((dim (viewport-dimensions (current-viewport))))
       (setf *position-tex*
             (make-texture nil :dimensions dim :element-type :vec3))
@@ -100,30 +100,78 @@
 
 ;;------------------------------------------------------------
 
+(defun-g attenuation-fudged ((frag-pos :vec3)
+                             (light-pos :vec3)
+                             (max :float))
+  (let* ((light-dist
+          (min max (length (- light-pos frag-pos)))))
+    (- 1.0 (/ light-dist max))))
+
 (defun-g calc-diffuse ((frag-pos :vec3)
                        (frag-normal :vec3)
-                       (light-pos :vec3))
+                       (light-pos :vec3)
+                       (light-color :vec3))
   (let* (;; diffuse color is the cosine of the angle between the
          ;; light and the normal. As both the vectors are
          ;; normalized we can use the dot-product to get this.
          (vec-to-light (- light-pos frag-pos))
          (dir-to-light (normalize vec-to-light))
-         (light-col (v! 1 0 0))
          (diffuse (saturate (dot dir-to-light frag-normal)))
          ;;
-         (fudge 0.001)
-         (light-dist (length (- light-pos frag-pos)))
-         (attenuation-fudged (/ 1 (* light-dist light-dist fudge))))
-    (* (vec3 (* diffuse attenuation-fudged))
-       light-col)))
+         (attenuation-fudged (attenuation-fudged frag-pos
+                                                 light-pos
+                                                 15))
+         (col
+          (* (vec3 (* diffuse attenuation-fudged))
+             light-color)))
+    (* 3 col)))
 
-(defun-g deferred-shading-frag ((uv :vec2)
+(defun-g light-sphere-vert ((vert g-pnt)
+                            &uniform
+                            (world->view :mat4)
+                            (view->clip :mat4)
+                            (ldata light-data :ubo))
+  (let* ((data (aref (light-data-pos ldata)
+                     gl-instance-id))
+         (light-pos (v! (s~ data :xyz) 0))
+         (light-size (w data))
+         (light-color (v! (* 0.3 (sin (+ 0.1 gl-instance-id)))
+                          (cos (+ 0.2 gl-instance-id))
+                          (sin (+ 0.3 gl-instance-id))))
+         ;; Unpack the data from our vert
+         ;; (pos & normal are in model space)
+         (pos (* (pos vert) light-size 1.0))
+         (normal (norm vert))
+         (uv (tex vert))
+
+         ;; model space to world space.
+         ;; We don't want to translate the normal, so we
+         ;; turn the mat4 to a mat3
+         (model-pos (v! pos 1))
+         (world-pos (+ model-pos light-pos))
+         (world-norm normal)
+
+         ;; world space to view space
+         (view-pos (* world->view world-pos))
+
+         ;; view space to clip space
+         (clip-pos (* view->clip view-pos)))
+
+    ;; return the clip-space position and the 3 other values
+    ;; that will be passed to the fragment shader
+    (values clip-pos
+            (s~ light-pos :xyz)
+            light-color
+            light-size)))
+
+(defun-g deferred-shading-frag ((light-pos :vec3)
+                                (light-color :vec3)
+                                (light-size :float)
                                 &uniform
                                 (vp-size :vec2)
                                 (pos-sampler :sampler-2d)
                                 (normal-sampler :sampler-2d)
                                 (albedo-sampler :sampler-2d)
-                                (light-pos :vec3)
                                 (cam-pos :vec3))
   (let* ((uv (/ (s~ gl-frag-coord :xy) vp-size))
          ;; we will multiply with color with the light-amount
@@ -138,11 +186,12 @@
          (frag-normal (normalize frag-normal))
 
          ;; ambient color is the same from all directions
-         (ambient (vec3 0.2))
+         (ambient (vec3 0.0))
 
          (diffuse-col (calc-diffuse frag-pos
                                     frag-normal
-                                    light-pos))
+                                    light-pos
+                                    light-color))
 
          ;; The final light amount is the sum of the different
          ;; components
@@ -153,42 +202,25 @@
     ;; color. Cool!
     (* object-color (v! light-amount 1))))
 
-(defpipeline-g second-pass (:points)
-  :fragment (deferred-shading-frag :vec2))
-
-(defun-g light-sphere-vert ((vert g-pnt)
-                            &uniform
-                            (scale :float)
-                            (model->world :mat4)
-                            (world->view :mat4)
-                            (view->clip :mat4))
-  (let* (;; Unpack the data from our vert
-         ;; (pos & normal are in model space)
-         (pos (* (pos vert) scale))
-         (normal (norm vert))
-         (uv (tex vert))
-
-         ;; model space to world space.
-         ;; We don't want to translate the normal, so we
-         ;; turn the mat4 to a mat3
-         (model-pos (v! pos 1))
-         (world-pos (* model->world model-pos))
-         (world-norm (* (m4:to-mat3 model->world)
-                        normal))
-
-         ;; world space to view space
-         (view-pos (* world->view world-pos))
-
-         ;; view space to clip space
-         (clip-pos (* view->clip view-pos)))
-
-    ;; return the clip-space position and the 3 other values
-    ;; that will be passed to the fragment shader
-    (values clip-pos
-            (v! 0 0))))
-
-(defpipeline-g volume-pass (:points)
+(defpipeline-g volume-pass ()
   :vertex (light-sphere-vert g-pnt)
-  :fragment (deferred-shading-frag :vec2))
+  :fragment (deferred-shading-frag :vec3 :vec3 :float))
+
+(defun-g albedo-frag ((uv :vec2)
+                      &uniform
+                      (pos-sampler :sampler-2d)
+                      (normal-sampler :sampler-2d)
+                      (albedo-sampler :sampler-2d))
+  (let* ((frag-pos (s~ (texture pos-sampler uv) :xyz))
+         (frag-normal (s~ (texture normal-sampler uv) :xyz))
+         (object-color (texture albedo-sampler uv))
+
+         (frag-normal (normalize frag-normal))
+         (ambient (vec3 0.03)))
+    (s~ (* object-color (v! ambient 1)) :xyz)
+    ))
+
+(defpipeline-g albedo-pass (:points)
+  :fragment (albedo-frag :vec2))
 
 ;;------------------------------------------------------------

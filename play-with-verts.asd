@@ -7,6 +7,7 @@
   :serial t
   :depends-on (#:cepl.sdl2
                #:nineveh :dirt :cepl.skitter.sdl2 :temporal-functions
+               :with-setf
                :sdl2-game-controller-db)
   :components ((:file "package")
                (:file "utils")

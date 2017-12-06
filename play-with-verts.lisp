@@ -4,6 +4,8 @@
 
 (defvar *last-time* (get-internal-real-time))
 (defvar *empty-buffer-stream* nil)
+(defvar *light-data-array* nil)
+(defvar *light-data* nil)
 
 (defun reset ()
   (unless *ground* (make-ground))
@@ -13,7 +15,21 @@
   (make-defer-fbo)
   (setf *sphere-data* (sphere))
   (setf *empty-buffer-stream*
-        (make-buffer-stream nil :primitive :points)))
+        (make-buffer-stream nil :primitive :points))
+  (setf *light-data-array*
+   (make-gpu-array
+     (list
+      (list
+       (loop :for i below 1000 collect
+          (v! (- (random 100f0) 50f0)
+              (random 80f0)
+              (- (random 100f0) 50f0)))))
+     :dimensions 1
+     :element-type 'light-data))
+
+  (setf *light-data*
+        (make-ubo *light-data-array*
+                  'light-data)))
 
 (defun game-step ()
   (let* ((now (get-internal-real-time))
@@ -42,33 +58,35 @@
       (with-instances (first (dimensions *pbuffer-src*))
         (draw #'first-pass *particle* *current-camera*)))
 
-    (map-g #'second-pass *empty-buffer-stream*
-           :vp-size (viewport-resolution (current-viewport))
-           :pos-sampler *position-sam*
-           :normal-sampler *normal-sam*
-           :albedo-sampler *albedo-sam*
-           :light-pos (pos *ball*)
-           :cam-pos (pos *current-camera*))
+    (with-blending *blend-params*
+      (with-setf (depth-test-function) nil
+        (map-g #'albedo-pass *empty-buffer-stream*
+               :pos-sampler *position-sam*
+               :normal-sampler *normal-sam*
+               :albedo-sampler *albedo-sam*)
 
-    (map-g #'volume-pass *sphere-data*
-           ;;vert
-           :scale 1f0
-           :model->world (m4:translation (v! 0 0 0 0))
-           :world->view (get-world->view-space *current-camera*)
-           :view->clip (projection *current-camera*)
-           ;;frag
-           :vp-size (viewport-resolution (current-viewport))
-           :pos-sampler *position-sam*
-           :normal-sampler *normal-sam*
-           :albedo-sampler *albedo-sam*
-           :light-pos (pos *ball*)
-           :cam-pos (pos *current-camera*))
+        (with-instances 1000
+          (map-g #'volume-pass *sphere-data*
+                 ;;vert
+                 :ldata *light-data*
+                 :world->view (get-world->view-space *current-camera*)
+                 :view->clip (projection *current-camera*)
+                 ;;frag
+                 :vp-size (viewport-resolution (current-viewport))
+                 :pos-sampler *position-sam*
+                 :normal-sampler *normal-sam*
+                 :albedo-sampler *albedo-sam*
+                 :cam-pos (pos *current-camera*)))))
 
     ;; display what we have drawn
     (swap)
     (particle-swap)
     (decay-events)))
 
+(defvar *blend-params* nil)
+
+(defstruct-g light-data
+  (pos (:vec4 1000)))
 
 (def-simple-main-loop play (:on-start #'reset)
   (game-step))
