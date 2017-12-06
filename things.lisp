@@ -26,12 +26,15 @@
   (m4:* (m4:translation (pos thing))
         (q:to-mat4 (rot thing))))
 
-(defmethod draw ((pipeline function) (thing thing))
+(defmethod draw ((pipeline function) (thing thing)
+                 (camera camera))
   (map-g pipeline (buf-stream thing)
+         :now (now)
+         :world->view (get-world->view-space camera)
+         :view->clip (projection camera)
          :scale (scale thing)
          :model->world (get-model->world-space thing)
-         :albedo (sampler thing)
-         :spec-map (specular-sampler thing)))
+         :albedo (sampler thing)))
 
 ;;------------------------------------------------------------
 ;; Floor
@@ -80,11 +83,14 @@
 (defmethod update ((thing particle) dt)
   nil)
 
-(defmethod draw ((pipeline function) (thing particle))
+(defmethod draw ((pipeline function) (thing particle)
+                 (camera camera))
   (map-g pipeline *inst-stream-src*
+         :now (now)
+         :world->view (get-world->view-space camera)
+         :view->clip (projection camera)
          :scale (scale thing)
          :model->world (get-model->world-space thing)
-         :albedo (sampler thing)
-         :spec-map (specular-sampler thing)))
+         :albedo (sampler thing)))
 
 ;;------------------------------------------------------------
