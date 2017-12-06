@@ -60,43 +60,38 @@
          (object-color (texture albedo uv))
 
          ;; We need to normalize the normal because the linear
-         ;; interpolation from the vertex shader will have shortened it
+         ;; interpolation from the vertex shader will have
+         ;; shortened it
          (frag-normal (normalize frag-normal))
 
          ;; ambient color is the same from all directions
-         (ambient 0.2)
+         (ambient (vec3 0.2))
 
-         ;; diffuse color is the cosine of the angle between the light
-         ;; and the normal. As both the vectors are normalized we can
-         ;; use the dot-product to get this.
+         ;; diffuse color is the cosine of the angle between the
+         ;; light and the normal. As both the vectors are
+         ;; normalized we can use the dot-product to get this.
          (vec-to-light (- light-pos frag-pos))
          (dir-to-light (normalize vec-to-light))
+         (light-col (v! 1 0 0))
          (diffuse (saturate (dot dir-to-light frag-normal)))
+         ;;
+         (fudge 0.001)
+         (light-dist (length (- light-pos frag-pos)))
+         (attenuation-fudged (/ 1 (* light-dist light-dist fudge)))
+         (diffuse-col (* (vec3 (* diffuse attenuation-fudged))
+                         light-col))
 
-         ;; The specular is similar but we do it between the direction
-         ;; our camera is looking and the direction the light will reflect.
-         ;; We also raise it to a big power so it's a much smaller spot
-         ;; with a quick falloff
-         (vec-to-cam (- cam-pos frag-pos))
-         (dir-to-cam (normalize vec-to-cam))
-         (reflection (normalize (reflect (- dir-to-light) frag-normal)))
-         (specular-power (* 4 (x (texture spec-map uv))))
-         (specular (* (expt (saturate (dot reflection dir-to-cam))
-                            32f0)
-                      specular-power))
+         ;; The final light amount is the sum of the different
+         ;; components
+         (light-amount (+ ambient diffuse-col)))
 
-         ;; The final light amount is the sum of the different components
-         (light-amount (+ ambient
-                          diffuse
-                          ;;specular
-                          )))
-
-    ;; And we multipy with the object color. This means that 0 light results
-    ;; in no color, and 1 light results in full color. Cool!
-    (* object-color light-amount)))
+    ;; And we multipy with the object color. This means that 0
+    ;; light results in no color, and 1 light results in full
+    ;; color. Cool!
+    (* object-color (v! light-amount 1))))
 
 ;; The pipeline itself, we map-g over this to draw stuff
-(defpipeline-g some-pipeline ()
+(defpipeline-g first-pass ()
   (some-vert-stage g-pnt pdata)
   (some-frag-stage :vec3 :vec3 :vec2))
 
@@ -105,7 +100,7 @@
 (defun upload-uniforms-for-cam (pipeline camera)
   (declare (type function pipeline))
   (map-g pipeline nil
-         :light-pos *light-pos*
+         :light-pos (pos *ball*)
          :cam-pos (pos camera)
          :now (now)
          :world->view (get-world->view-space camera)

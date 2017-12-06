@@ -5,7 +5,10 @@
 (defvar *last-time* (get-internal-real-time))
 
 (defun reset ()
-  (unless *ground* (make-ground)))
+  (unless *ground* (make-ground))
+  (make-ball)
+  (reset-particles)
+  (make-particle))
 
 (defun game-step ()
   (let* ((now (get-internal-real-time))
@@ -26,13 +29,13 @@
     (update-particle-state *stream-src* *tfs-dst*)
 
     ;; rendering time
-    (upload-uniforms-for-cam #'some-pipeline *current-camera*)
-    ;;(draw #'some-pipeline *ground*)
+    (upload-uniforms-for-cam #'first-pass *current-camera*)
+    ;;(draw #'first-pass *ground*)
     (update *ball* delta)
-    (draw #'some-pipeline *ball*)
+    (draw #'first-pass *ball*)
 
     (with-instances (first (dimensions *pbuffer-src*))
-      (draw #'some-pipeline *particle*))
+      (draw #'first-pass *particle*))
 
     ;; display what we have drawn
     (swap)

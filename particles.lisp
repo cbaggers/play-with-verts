@@ -54,24 +54,34 @@
 
 (defun-g new-particle-vel ((pos :vec3)
                            (vel :vec3)
-                           (target :vec3))
-  (let* ((dir (- target pos))
-         (dist (max (vec3 50) (length dir)))
-         (grav 12f0)
-         (pull (/ (* (normalize dir)
-                     grav)
-                  dist)))
-    (+ (* vel 0.999) (* pull 0.1))))
+                           (target :vec3)
+                           (id :int)
+                           (now :float))
+  (labels ((fudge ((id :int) (now :float) (fac :float))
+             (+ 0.8
+                (- (* 0.4 (* (sin id)
+                             (sin (+ id now))))
+                   0.2))))
+    (let* ((dir (- target pos))
+           (dist (max (vec3 50) (length dir)))
+           (grav 12f0)
+           (grav-fudge (* grav
+                          (v! (fudge id now 0.0)
+                              (fudge id now 0.2)
+                              (fudge id now now))))
+           (pull (/ (* (normalize dir)
+                       grav-fudge)
+                    dist)))
+      (+ (* vel 0.999) (* pull 0.1)))))
 
 (defun-g update-particle ((data pdata)
                           &uniform
                           (target0 :vec3)
-                          (target1 :vec3))
+                          (now :float))
   (let* ((pos (pdata-pos data))
          (vel (pdata-vel data))
          (target (pdata-target data))
-         (new-vel (new-particle-vel pos vel target0))
-         (new-vel (new-particle-vel pos new-vel target1))
+         (new-vel (new-particle-vel pos vel target0 gl-instance-id now))
          (new-pos (+ pos vel)))
     (values
      (v! 0 0 0 0)
@@ -84,21 +94,22 @@
   :vertex (update-particle pdata))
 
 (defun update-particle-state (src-stream dst-tfs)
-  (let* ((factor (* (now) 1))
+  (let* ((factor (* (now) 0.4))
          (dist 80)
          (vec (v! (* dist (sin factor))
                   0
-                  (* dist (cos factor)))))
-    (with-transform-feedback (dst-tfs)
-      (map-g #'update-particle-pline src-stream
-             :target0 vec
-             :target1 (v3:negate vec)))))
+                  (* dist (cos (* 0.5 factor))))))
+    (setf (pos *ball*) vec))
+  (with-transform-feedback (dst-tfs)
+    (map-g #'update-particle-pline src-stream
+           :target0 (pos *ball*)
+           :now (now))))
 
 ;;------------------------------------------------------------
 
 (defun reset-particles ()
   (let ((count 64000))
-    (progn;;unless *pbuffer-src*
+    (unless *pbuffer-src*
       (setf *pbuffer-src* (make-gpu-array nil :dimensions count
                                           :element-type 'pdata)
             *pbuffer-dst* (make-gpu-array nil :dimensions count
