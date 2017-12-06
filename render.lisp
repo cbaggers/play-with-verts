@@ -103,14 +103,20 @@
 (defun-g attenuation-fudged ((frag-pos :vec3)
                              (light-pos :vec3)
                              (max :float))
-  (let* ((light-dist
-          (min max (length (- light-pos frag-pos)))))
-    (- 1.0 (/ light-dist max))))
+  (let* ((light-dist (length (- light-pos frag-pos))))
+    (/ 1.5 (* light-dist light-dist 0.04))))
+
+(defun-g attenuation-fudged ((frag-pos :vec3)
+                             (light-pos :vec3)
+                             (max :float))
+  (let* ((light-dist (length (- light-pos frag-pos))))
+    (smoothstep 1 0 (/ light-dist max))))
 
 (defun-g calc-diffuse ((frag-pos :vec3)
                        (frag-normal :vec3)
                        (light-pos :vec3)
-                       (light-color :vec3))
+                       (light-color :vec3)
+                       (light-size :float))
   (let* (;; diffuse color is the cosine of the angle between the
          ;; light and the normal. As both the vectors are
          ;; normalized we can use the dot-product to get this.
@@ -120,11 +126,11 @@
          ;;
          (attenuation-fudged (attenuation-fudged frag-pos
                                                  light-pos
-                                                 15))
-         (col
-          (* (vec3 (* diffuse attenuation-fudged))
-             light-color)))
-    (* 3 col)))
+                                                 light-size))
+         (col (* (vec3 (* diffuse attenuation-fudged))
+                 light-color
+                 1.4)))
+    col))
 
 (defun-g light-sphere-vert ((vert g-pnt)
                             &uniform
@@ -134,13 +140,13 @@
   (let* ((data (aref (light-data-pos ldata)
                      gl-instance-id))
          (light-pos (v! (s~ data :xyz) 0))
-         (light-size (w data))
+         (light-size (* 1.5 (w data)))
          (light-color (v! (* 0.3 (sin (+ 0.1 gl-instance-id)))
                           (cos (+ 0.2 gl-instance-id))
                           (sin (+ 0.3 gl-instance-id))))
          ;; Unpack the data from our vert
          ;; (pos & normal are in model space)
-         (pos (* (pos vert) light-size 1.0))
+         (pos (* (pos vert) light-size))
          (normal (norm vert))
          (uv (tex vert))
 
@@ -163,6 +169,14 @@
             (s~ light-pos :xyz)
             light-color
             light-size)))
+
+
+;; float specularStrength = 0.5;
+;; vec3 viewDir = normalize(viewPos - FragPos);
+;; vec3 reflectDir = reflect(-lightDir, norm);
+;; float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32);
+;; vec3 specular = specularStrength * spec * lightColor;
+
 
 (defun-g deferred-shading-frag ((light-pos :vec3)
                                 (light-color :vec3)
@@ -191,7 +205,14 @@
          (diffuse-col (calc-diffuse frag-pos
                                     frag-normal
                                     light-pos
-                                    light-color))
+                                    light-color
+                                    light-size))
+
+         ;; (view-dir (normalize (- cam-pos frag-pos)))
+         ;; (light-dir (normalize (- light-pos frag-pos)))
+         ;; (reflect-dir (reflect (- light-dir) frag-normal))
+         ;; (spec (pow (max (dot view-dir reflect-dir) 0.0) 32))
+         ;; (specular (* 0.02 spec (- (vec3 1f0) light-color)))
 
          ;; The final light amount is the sum of the different
          ;; components
@@ -217,8 +238,7 @@
 
          (frag-normal (normalize frag-normal))
          (ambient (vec3 0.03)))
-    (s~ (* object-color (v! ambient 1)) :xyz)
-    ))
+    (s~ (* object-color (v! ambient 1)) :xyz)))
 
 (defpipeline-g albedo-pass (:points)
   :fragment (albedo-frag :vec2))
