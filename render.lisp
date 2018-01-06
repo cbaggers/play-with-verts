@@ -8,6 +8,9 @@
   (target :vec3)
   (life :float))
 
+(defstruct-g light-data
+  (pos (:vec4 1000)))
+
 ;;------------------------------------------------------------
 
 (defvar *sphere-data* nil)

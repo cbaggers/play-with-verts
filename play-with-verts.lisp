@@ -85,9 +85,6 @@
 
 (defvar *blend-params* nil)
 
-(defstruct-g light-data
-  (pos (:vec4 1000)))
-
 (def-simple-main-loop play (:on-start #'reset)
   (game-step))
 
