@@ -52,6 +52,7 @@
 ;; Foo!
 
 (defvar *self*)
+(defvar *god* (make-instance 'actor))
 
 (defclass actor (thing)
   ((stream :initform (box 1 1 1))
@@ -67,9 +68,24 @@
       (play-sound :bang)
       (die))))
 
+(defmacro as-god (&body body)
+  `(let ((*self* *god*))
+     ,@body))
+
+(define-actor ship ((:visual "ship.png")
+                    (health 10)
+                    (bullet nil))
+  (setf x (mouse-x))
+  ;;(spawn :bullet (v! 0 0) :speed 10)
+  (when (gamepad-button-a)
+    (setf bullet (spawn :bullet (v! 4 7) :speed 2)))
+  (when (touching-p (actors-in-range 10 :alien-bullet))
+    (die)))
+
 (defmacro define-actor (name values &body body)
-  (let ((local-vars (remove-if #'keywordp values
-                               :key #'first)))
+  (let* ((local-vars (remove-if #'keywordp values
+                                :key #'first))
+         (local-var-names (mapcar #'first local-vars)))
     `(progn
        (defclass ,name (actor)
          ,(loop :for (var-name var-val) :in local-vars :collect
@@ -77,9 +93,11 @@
                          :initarg ,(intern (symbol-name var-name)
                                            :keyword))))
        (defmethod update ((self ,name) dt)
-         (symbol-macrolet ((x (x (slot-value self 'pos))))
-           (let ((*self* self))
-             ,@body))))))
+         (symbol-macrolet ((x (x (slot-value self 'pos)))
+                           (y (y (slot-value self 'pos))))
+           (with-slots ,local-var-names self
+             (let ((*self* self))
+               ,@body)))))))
 
 ;;------------------------------------------------------------
 
@@ -89,7 +107,8 @@
                             :play-with-verts))
          (actor (apply #'make-instance hack-name
                        args)))
-    (setf (pos actor) (v! (x pos) 1 (y pos)))
+    (setf (pos actor)
+          (v3:+ (pos *self*) (v! (x pos) 1 (y pos))))
     (push actor *things*)
     actor))
 
@@ -112,6 +131,9 @@
         (dir (v3:normalize (q:to-direction (rot *self*)))))
     (v3:incf (pos *self*) (v3:*s dir distance))))
 
-(defun actors-in-range (distance))
+(defun gamepad-button-a ())
+
+(defun actors-in-range (distance &optional actor-kind)
+  (declare (ignore distance actor-kind)))
 
 ;;------------------------------------------------------------
