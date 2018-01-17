@@ -34,7 +34,7 @@ all functions etc are relative to self.
   (:normal-mode
    (setf x (mouse-x))
    (when (gamepad-button-a)
-     (setf bullet (spawn :bullet (4 7) :speed 2))
+     (setf bullet (spawn :bullet (v! 4 7) :speed 2))
      (change-mode :bullet-mode))
    (when (touching-p (actors-in-range 10 :alien-bullet))
      (die)))
