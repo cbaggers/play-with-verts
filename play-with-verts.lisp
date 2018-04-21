@@ -38,11 +38,12 @@
                     (bg-color :vec4)
                     (fg-color :vec4))
   (let* ((pos (v! (x pos) (- 1 (y pos))))
-         (raw (texture-size msdf 0))
-         (msdf-unit (/ (vec2 (x raw) (y raw)) px-range))
          (sam (s~ (texture msdf pos) :xyz))
-         (sig-dist (- (median (x sam) (y sam) (z sam)) 0.5)))
-    (multf sig-dist (dot msdf-unit (/ (fwidth pos) 0.5)))
+         (size4 (texture-size msdf 0))
+         (msdf-unit (/ px-range (vec2 (x size4) (y size4))))
+         (sig-dist (- (median (x sam) (y sam) (z sam))
+                      0.5)))
+    (multf sig-dist (dot msdf-unit (/ 0.5 (fwidth pos))))
     (let* ((opacity (clamp (+ sig-dist 0.5) 0.0 1.0)))
       (mix bg-color fg-color opacity))))
 
@@ -52,7 +53,7 @@
 (defun use-msdf ()
   (map-g #'msdf *bs*
          :msdf *some-sampler*
-         :px-range 0f0
+         :px-range 2f0
          :bg-color (v! 0 0 0 0)
          :fg-color (v! 1 1 1 1)))
 
@@ -62,26 +63,11 @@
   (setf (viewport-resolution (current-viewport))
         (surface-resolution (current-surface (cepl-context))))
   (as-frame
-    (map-g #'nada *bs* :sam *some-sampler*)
-    ;;(use-msdf)
+    ;;(map-g #'nada *bs* :sam *some-sampler*)
+    (use-msdf)
     ))
 
 (def-simple-main-loop play (:on-start #'reset)
   (game-step))
 
 ;;------------------------------------------------------------
-
-(defstruct-g bah
-  (data (:int 100)))
-
-(defun-g yay-compute (&uniform (woop bah :ssbo))
-  (declare (local-size :x 1 :y 1 :z 1))
-  (setf (aref (bah-data woop) (int (x gl-work-group-id)))
-        (int (x gl-work-group-id)))
-  (values))
-
-(defpipeline-g test-compute ()
-  :compute yay-compute)
-
-;; (map-g #'test-compute (make-compute-space 10)
-;;       :woop *ssbo*)
