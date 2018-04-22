@@ -8,11 +8,7 @@
 ;;     float advance;
 ;; }
 
-(defstruct-g goobar
-  (x :float)
-  (y :float))
-
-(defstruct-g bitmap-glyph
+(defstruct-g (bitmap-glyph :layout :std-430)
   (atlas-x :uint)
   (atlas-y :uint)
   (atlas-w :uint)
@@ -23,23 +19,8 @@
   (max-y :float)
   (advance :float))
 
-(defstruct-g font-atlas
+(defstruct-g (font-atlas :layout :std-140)
   (glyphs (bitmap-glyph 500)))
-
-(defun foo ()
-  (loop :for (ax ay aw ah minx maxx miny maxy a) :in *tmp-info*
-     :for i :from 0
-     :for elem = (aref-c tmp2 i)
-     :do (setf (bitmap-glyph-atlas-x elem) ax
-               (bitmap-glyph-atlas-y elem) ay
-               (bitmap-glyph-atlas-w elem) aw
-               (bitmap-glyph-atlas-h elem) ah
-               ;; (bitmap-glyph-min-x elem) minx
-               ;; (bitmap-glyph-max-x elem) maxx
-               ;; (bitmap-glyph-min-y elem) miny
-               ;; (bitmap-glyph-max-y elem) maxy
-               ;; (bitmap-glyph-advance elem) a
-               )))
 
 (defvar *atlas-glyphs* nil)
 
@@ -541,3 +522,19 @@
    (0 0 0 0 0 0 0 0 0)
    (0 0 0 0 0 0 0 0 0)
    (16 222 14 34 -1.1510f0 8.7080f0 -6.6181f0 22.6559f0 7.7993f0)))
+
+(defun foo (atlas-c-arr)
+  ;; atlas-c-arr should be an array of 1 font-atlasn
+  (let ((glyphs-c-array (font-atlas-glyphs (aref-c atlas-c-arr 0))))
+    (loop :for (ax ay aw ah minx maxx miny maxy a) :in *tmp-info*
+       :for i :from 0
+       :for elem = (aref-c glyphs-c-array i)
+       :do (setf (bitmap-glyph-atlas-x elem) ax
+                 (bitmap-glyph-atlas-y elem) ay
+                 (bitmap-glyph-atlas-w elem) aw
+                 (bitmap-glyph-atlas-h elem) ah
+                 (bitmap-glyph-min-x elem) (float minx 0f0)
+                 (bitmap-glyph-max-x elem) (float maxx 0f0)
+                 (bitmap-glyph-min-y elem) (float miny 0f0)
+                 (bitmap-glyph-max-y elem) (float maxy 0f0)
+                 (bitmap-glyph-advance elem) (float a 0f0)))))
