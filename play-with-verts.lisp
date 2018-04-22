@@ -8,9 +8,13 @@
 
 (defun reset ()
   (setf *bs* (make-buffer-stream nil :primitive :points))
+  ;;
   (setf *some-sampler* (tex "capital-a.png"))
   (setf (wrap *some-sampler*) :clamp-to-edge)
-  (setf *atlas-sampler* (tex "atlas.png"))
+  ;;
+  (setf *atlas-sampler* (tex "atlas2.png"))
+  (setf (wrap *atlas-sampler*) :clamp-to-edge)
+  ;;
   (setf *atlas-glyphs* (make-ubo nil 'font-atlas))
   (with-gpu-array-as-c-array (c-arr (ubo-data *atlas-glyphs*))
     (foo c-arr)))
@@ -23,13 +27,32 @@
 (defpipeline-g nada (:points)
   :fragment (goodluck-f :vec2))
 
+;;--
+
+(defvar *atlas-sampler* nil)
+
 (defun-g median ((r :float) (g :float) (b :float))
   (max (min r g)
        (min (max r g) b)))
 
-;;--
-
-(defvar *atlas-sampler* nil)
+(defun-g msdf-sample ((uv :vec2)
+                      (tile-offset-in-pixels :vec2)
+                      (tile-dims-in-pixels :vec2)
+                      (msdf :sampler-2d)
+                      (sampler-dims :vec2)
+                      (px-range :float)
+                      (bg-color :vec4)
+                      (fg-color :vec4))
+  (let* ((nuv (/ (+ tile-offset-in-pixels
+                    (* tile-dims-in-pixels uv))
+                 sampler-dims))
+         (sam (s~ (texture msdf nuv) :xyz))
+         (msdf-unit (/ px-range tile-dims-in-pixels))
+         (sig-dist (- (median (x sam) (y sam) (z sam))
+                      0.5)))
+    (multf sig-dist (dot msdf-unit (/ 0.5 (fwidth uv))))
+    (let* ((opacity (clamp (+ sig-dist 0.5) 0.0 1.0)))
+      (mix bg-color fg-color opacity))))
 
 (defun-g msdf-frag ((pos :vec2)
                     &uniform
@@ -38,14 +61,15 @@
                     (bg-color :vec4)
                     (fg-color :vec4))
   (let* ((pos (v! (x pos) (- 1 (y pos))))
-         (sam (s~ (texture msdf pos) :xyz))
-         (size4 (texture-size msdf 0))
-         (msdf-unit (/ px-range (vec2 (x size4) (y size4))))
-         (sig-dist (- (median (x sam) (y sam) (z sam))
-                      0.5)))
-    (multf sig-dist (dot msdf-unit (/ 0.5 (fwidth pos))))
-    (let* ((opacity (clamp (+ sig-dist 0.5) 0.0 1.0)))
-      (mix bg-color fg-color opacity))))
+         (size (s~ (texture-size msdf 0) :xy)))
+    (msdf-sample pos
+                 (v! 0 0)
+                 size
+                 msdf
+                 size
+                 px-range
+                 bg-color
+                 fg-color)))
 
 (defpipeline-g msdf (:points)
   :fragment (msdf-frag :vec2))
@@ -57,36 +81,28 @@
                              (bg-color :vec4)
                              (fg-color :vec4)
                              (atlas font-atlas :ubo))
-  (let* ((code 65)
-         (glyph (aref (font-atlas-glyphs atlas) code)))
+  (let* ((code #.(char-code #\@))
+         (glyph (aref (font-atlas-glyphs atlas) code))
+         (size2 (s~ (texture-size msdf 0) :xy)))
     (with-slots (atlas-x atlas-y atlas-w atlas-h) glyph
-      (let* ((x (/ atlas-x 1024f0))
-             (y (/ atlas-y 1024f0))
-             (w (/ 24 1024f0))
-             (h (/ 27 1024f0))
-             (spos (v! (+ x (* (x pos) w))
-                       (- 1 (+ y (* (y pos) h)))))
-             (sam (s~ (texture msdf spos) :xyz))
-             (size4 (texture-size msdf 0))
-             (msdf-unit (/ px-range (vec2 (x size4) (y size4))))
-             (sig-dist (- (median (x sam) (y sam) (z sam))
-                          0.5)))
-        (multf sig-dist (dot msdf-unit (/ 0.5 (fwidth pos))))
-        (let* ((opacity (clamp (+ sig-dist 0.5) 0.0 1.0)))
-          (mix bg-color fg-color opacity))))))
+      (msdf-sample (v! (x pos) (- (y pos)))
+                   (vec2 atlas-x
+                         (- (y size2) atlas-y))
+                   (vec2 atlas-w
+                         atlas-h)
+                   msdf
+                   size2
+                   px-range
+                   bg-color
+                   fg-color))))
 
 (defpipeline-g msdf-any-char (:points)
   :fragment (msdf-any-char-frag :vec2))
 
 (defun use-msdf ()
-  ;; (map-g #'msdf *bs*
-  ;;        :msdf *some-sampler*
-  ;;        :px-range 2f0
-  ;;        :bg-color (v! 0 0 0 0)
-  ;;        :fg-color (v! 1 1 1 1))
   (map-g #'msdf-any-char *bs*
          :msdf *atlas-sampler*
-         :px-range 2f0
+         :px-range 1f0
          :bg-color (v! 0 0 0 0)
          :fg-color (v! 1 1 1 1)
          :atlas *atlas-glyphs*))
