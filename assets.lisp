@@ -8,7 +8,7 @@
 
 (defvar *samplers* (make-hash-table :test #'equal))
 
-(defun tex (path &optional (force nil) (mipmap t))
+(defun get-tex (path &optional (force nil) (mipmap t))
   (when force
     (let ((s (gethash path *samplers*)))
       (when s
