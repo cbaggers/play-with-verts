@@ -34,24 +34,31 @@
 ;;          (expt (- 1 x) 4))
 ;;        uv)
 
+(defun-g dist-noise ((pos :vec2))
+  (perlin-noise pos))
+
 (defun-g foo-fs ((uv :vec2)
                  &uniform
                  (now :float))
   (let* ((p (* uv 10))
-         (distort (perlin-noise p))
-         (distort1 (perlin-noise (+ p (v! 5 (- now)))))
+         (distort (dist-noise p))
+         (distort1 (dist-noise (+ p (v! 5 0))))
          (duv (v! (+ (x p) distort)
-                  (+ (x p) distort1)))
-         (result (saturate
-                  (* (+ (perlin-noise duv) 0.7) 0.5)))
-         (grad (saturate (expt (- 1 (y uv)) 4)))
+                  (+ (y p) distort1 (- now))))
+         (result (expt (+ (* (cellular-noise duv) 0.8) 1)
+                       10))
+         (inv-y (- 1 (y uv)))
+         (grad (* 2 inv-y))
+         (hard 1)
+         (foo (- 1 (smoothstep 0 0.7 (y uv))))
+         (result (* (+ result grad)
+                    hard
+                    foo))
          (col (mix (v! 0.0352 0.952 1.0)
                    (v! 0.0274 0.517 0.894)
                    grad)))
-    (* (vec4 (* result grad col) 1) 4)
-    ;; (graph (lambda ((x :float))
-    ;;          (smoothstep 0 1 x))
-    ;;    uv)
+    (vec4 (* result col) 1)
+    ;;(vec4 foo)
     ))
 
 (defpipeline-g foo-pline ()
@@ -72,7 +79,7 @@
     (setf (viewport-resolution (current-viewport)) res)
     (as-frame
       (map-g #'foo-pline *verts* :view->clip vc :now now)
-      (map-g #'quad-pline (get-quad-stream-v2) :now now)
+      ;;(map-g #'quad-pline (get-quad-stream-v2) :now now)
       )))
 
 (def-simple-main-loop play (:on-start #'reset)
