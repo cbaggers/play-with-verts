@@ -11,5 +11,4 @@
   :components ((:file "package")
                (:file "utils")
                (:file "assets")
-               (:file "font-info")
                (:file "play-with-verts")))
