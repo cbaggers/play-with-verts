@@ -37,6 +37,14 @@
 (defun-g dist-noise ((pos :vec2))
   (perlin-noise pos))
 
+;;;; noise flame
+;; float4 flame = saturate(noise.a * _Hard)
+
+;;;; noise flame edge
+;; float4 flamerim = saturate((noise.a + _Edge) * _Hard) - flame
+;;;; coloured flame edge
+;; float4 flamecolored2 = flamerim * gradientTint
+
 (defun-g foo-fs ((uv :vec2)
                  &uniform
                  (now :float))
@@ -56,10 +64,17 @@
                     foo))
          (col (mix (v! 0.0352 0.952 1.0)
                    (v! 0.0274 0.517 0.894)
-                   grad)))
-    (vec4 (* result col) 1)
-    ;;(vec4 foo)
-    ))
+                   inv-y))
+         (flame-col (* result col))
+         (edge 0.1)
+         ;; (rim (- (saturate (+ result edge))
+         ;;         result))
+         ;; (rim (- result2 result))
+         ;; (rim-col (* rim (v! 1 0 0)))
+         )
+    (vec4 (+ flame-col ;;rim-col
+             )
+          1)))
 
 (defpipeline-g foo-pline ()
   (foo-vs g-pnt)
