@@ -111,7 +111,7 @@
                 (v! 1 1))
           (v2:*s res 0.5))))
 
-(defun composite (res world->view view->clip)
+(defun composite (light-pos res world->view view->clip)
   (with-blending *blend-params*
     (map-g #'compos-pline *empty-stream*
            :exposure 0.64
@@ -121,7 +121,7 @@
            :first-pass *fbo-sam*
            :vp-size res
            :screen-light-pos
-           (blah (v! 0 2 -15)
+           (blah light-pos
                  res
                  (m4:* world->view (m4:translation (v! 0 0 0)))
                  view->clip))))
@@ -166,7 +166,8 @@
           (with-slots (pos rot) *camera*
             (m4:look-at (v! 0 1 0)
                         pos
-                        (v3:+ pos (q:to-direction rot))))))
+                        (v3:+ pos (q:to-direction rot)))))
+         (light-pos (v! -1 2.3 -15)))
     (setf (viewport-resolution (current-viewport)) res)
     (control)
     (with-fbo-bound (*fbo*)
@@ -187,7 +188,7 @@
                    2f0
                    world->view
                    view->clip)
-        (flat-ball (v! 0 2 -15)
+        (flat-ball light-pos
                    (v! 1 1 1)
                    0.5f0
                    world->view
@@ -210,12 +211,12 @@
                    2f0
                    world->view
                    view->clip)
-        (draw-ball (v! 0 2 -15)
+        (draw-ball light-pos
                    (v! 1 1 1)
                    0.5f0
                    world->view
                    view->clip))
-      (composite res world->view view->clip))
+      (composite light-pos res world->view view->clip))
     (decay-events)))
 
 
