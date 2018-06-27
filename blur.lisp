@@ -38,6 +38,19 @@
 
 ;;------------------------------------------------------------
 
+(defvar *splat-stream* nil)
+
+(defun-g plah-f ((uv :vec2) &uniform (sam :sampler-2d))
+  (v! 1 0 0 1))
+
+(defpipeline-g plah (:points)
+  :fragment (plah-f :vec2))
+
+(defun splat (sampler)
+  (map-g #'plah *splat-stream* :sam sampler))
+
+;;------------------------------------------------------------
+
 (defun-g aberration-color-ramp-stateless ((f :float))
   (let* ((f (* f 3f0))
          (r (- 1f0 (- f 0.5)))

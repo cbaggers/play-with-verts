@@ -21,7 +21,10 @@
     (setf *scene-sampler*
           (sample (attachment-tex *scene-fbo* 0)))
     (setf *scene-depth-sampler*
-          (sample (attachment-tex *scene-fbo* :d)))))
+          (sample (attachment-tex *scene-fbo* :d))))
+  (unless *splat-stream*
+    (setf *splat-stream*
+          (make-buffer-stream nil :primitive :points))))
 
 (defun game-step ()
   (let* ((now (get-internal-real-time))
