@@ -9,22 +9,22 @@
 (defvar *scene-depth-sampler* nil)
 
 (defun reset ()
+  (setf (clear-color) (v! 1 1 1 1))
   (setf *things* nil)
   (make-ground)
   (loop :for i :below 10 :do
      (make-box))
   (loop :for i :below 10 :do
      (make-ball))
-  (unless *scene-fbo*
-    (setf *scene-fbo*
-          (make-fbo 0 :d))
-    (setf *scene-sampler*
-          (sample (attachment-tex *scene-fbo* 0)))
-    (setf *scene-depth-sampler*
-          (sample (attachment-tex *scene-fbo* :d))))
-  (unless *splat-stream*
-    (setf *splat-stream*
-          (make-buffer-stream nil :primitive :points))))
+  (free *scene-fbo*)
+  (setf *scene-fbo*
+        (make-fbo 0 :d))
+  (setf *scene-sampler*
+        (sample (attachment-tex *scene-fbo* 0)))
+  (setf *scene-depth-sampler*
+        (sample (attachment-tex *scene-fbo* :d)))
+  (unless *alt-sampler*
+    (setf *alt-sampler* (tex "rust.jpg"))))
 
 (defun game-step ()
   (let* ((now (get-internal-real-time))
@@ -45,14 +45,11 @@
       (loop :for thing :in *things* :do
          (update thing delta)
          (draw #'some-pipeline *current-camera* thing)))
-    ;; (as-frame
-    ;;   (loop :for thing :in *things* :do
-    ;;      (update thing delta)
-    ;;      (draw #'some-pipeline *current-camera* thing)))
 
     (as-frame
       (radial-blur *scene-sampler*)
-      (draw-tex *scene-sampler* :scale 0.3))
+      ;;(draw-tex *scene-sampler* :scale 1)
+      )
 
     (decay-events)))
 

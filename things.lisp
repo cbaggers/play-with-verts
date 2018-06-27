@@ -29,7 +29,9 @@
          :model->world (get-model->world-space thing)
          :world->view (get-world->view-space camera)
          :view->clip (projection camera)
-         :albedo (sampler thing)))
+         :albedo (sampler thing)
+         :alt-sam *alt-sampler*
+         :now (now)))
 
 (defmethod update ((thing thing) dt) nil)
 

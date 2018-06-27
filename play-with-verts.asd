@@ -6,8 +6,14 @@
   :license "Specify license here"
   :serial t
   :depends-on (#:cepl.sdl2
-               #:nineveh :dirt :cepl.skitter.sdl2 :temporal-functions
-               :sdl2-game-controller-db)
+               #:nineveh
+               :dirt
+               :cepl.skitter.sdl2
+               :temporal-functions
+               :rtg-math
+               :rtg-math.vari
+               :sdl2-game-controller-db
+               :with-setf)
   :components ((:file "package")
                (:file "utils")
                (:file "render")

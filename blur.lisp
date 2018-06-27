@@ -12,42 +12,33 @@
 
 (defun-g rblur-frag ((uv :vec2)
                      &uniform
-                     (sam :sampler-2d))
+                     (sam :sampler-2d)
+                     (aspect-ratio :float))
   (let* ((fpos uv)
          (focus (v! 0.5 0.5))
          (dir (normalize (- focus uv)))
-         (steps 40.0)
+         (steps 64.0)
          (full (texture sam uv))
          (color (s~ full :xyz))
          (depth (w full))
-         (scaled-dir (* dir 0.0004)))
+         (scaled-dir (* dir 0.0003)))
     (for (i 1) (< i steps) (++ i)
          (incf fpos scaled-dir)
          (let ((factor (aberration-color-ramp-stateless
                         (/ i steps))))
            (incf color (* factor (s~ (texture sam fpos) :xyz)))))
-    (v! (/ (* 3 color) steps) 0)))
+    (* (v! (/ (* 3 color) steps) 0)
+       (vignette uv))))
 
 (defpipeline-g rblur ()
   (rblur-vert :vec2)
   (rblur-frag :vec2))
 
 (defun radial-blur (sampler)
-  (map-g #'rblur (get-quad-stream-v2)
-         :sam sampler))
-
-;;------------------------------------------------------------
-
-(defvar *splat-stream* nil)
-
-(defun-g plah-f ((uv :vec2) &uniform (sam :sampler-2d))
-  (v! 1 0 0 1))
-
-(defpipeline-g plah (:points)
-  :fragment (plah-f :vec2))
-
-(defun splat (sampler)
-  (map-g #'plah *splat-stream* :sam sampler))
+  (let ((res (viewport-resolution (current-viewport))))
+    (map-g #'rblur (get-quad-stream-v2)
+           :sam sampler
+           :aspect-ratio (/ (y res) (x res)))))
 
 ;;------------------------------------------------------------
 
