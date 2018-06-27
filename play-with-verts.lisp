@@ -14,7 +14,14 @@
   (loop :for i :below 10 :do
      (make-box))
   (loop :for i :below 10 :do
-     (make-ball)))
+     (make-ball))
+  (unless *scene-fbo*
+    (setf *scene-fbo*
+          (make-fbo 0 :d))
+    (setf *scene-sampler*
+          (sample (attachment-tex *scene-fbo* 0)))
+    (setf *scene-depth-sampler*
+          (sample (attachment-tex *scene-fbo* :d)))))
 
 (defun game-step ()
   (let* ((now (get-internal-real-time))
@@ -27,7 +34,7 @@
 
     ;; set the position of our viewport
     (setf (resolution (current-viewport))
-          (surface-resolution (current-surface *cepl-context*)))
+          (surface-resolution (current-surface)))
 
     ;; draw stuff
     (with-fbo-bound (*scene-fbo*)
@@ -35,14 +42,15 @@
       (loop :for thing :in *things* :do
          (update thing delta)
          (draw #'some-pipeline *current-camera* thing)))
+    ;; (as-frame
+    ;;   (loop :for thing :in *things* :do
+    ;;      (update thing delta)
+    ;;      (draw #'some-pipeline *current-camera* thing)))
 
-    (clear)
-    (radial-blur *scene-sampler*)
+    (as-frame
+      (radial-blur *scene-sampler*)
+      (draw-tex *scene-sampler* :scale 0.3))
 
-    ;;(draw-tex *scene-sampler* :scale 0.3)
-
-    ;; display what we have drawn
-    (swap)
     (decay-events)))
 
 

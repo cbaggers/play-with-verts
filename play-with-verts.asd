@@ -14,4 +14,5 @@
                (:file "assets")
                (:file "camera")
                (:file "things")
+               (:file "blur")
                (:file "play-with-verts")))

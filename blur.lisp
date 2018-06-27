@@ -16,11 +16,11 @@
   (let* ((fpos uv)
          (focus (v! 0.5 0.5))
          (dir (normalize (- focus uv)))
-         (steps 64.0)
+         (steps 40.0)
          (full (texture sam uv))
          (color (s~ full :xyz))
          (depth (w full))
-         (scaled-dir (* dir 0.001)))
+         (scaled-dir (* dir 0.0004)))
     (for (i 1) (< i steps) (++ i)
          (incf fpos scaled-dir)
          (let ((factor (aberration-color-ramp-stateless
