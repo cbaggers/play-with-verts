@@ -16,7 +16,8 @@
      (make-box))
   (loop :for i :below 10 :do
      (make-ball))
-  (free *scene-fbo*)
+  (when *scene-fbo*
+    (free *scene-fbo*))
   (setf *scene-fbo*
         (make-fbo 0 :d))
   (setf *scene-sampler*
@@ -47,8 +48,9 @@
          (draw #'some-pipeline *current-camera* thing)))
 
     (as-frame
-      (radial-blur *scene-sampler*)
+      ;;(radial-blur *scene-sampler*)
       ;;(draw-tex *scene-sampler* :scale 1)
+      (blat *scene-sampler*)
       )
 
     (decay-events)))

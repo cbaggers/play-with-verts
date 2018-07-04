@@ -21,4 +21,5 @@
                (:file "camera")
                (:file "things")
                (:file "blur")
+               (:file "fxaa")
                (:file "play-with-verts")))
