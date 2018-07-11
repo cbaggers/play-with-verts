@@ -2,6 +2,14 @@
 
 ;;------------------------------------------------------------
 
+;; https://learnopengl.com/Advanced-Lighting/Gamma-Correction
+;;
+;; See fxaa.lisp for the fragment shader where we are applying
+;; the gamma correction. Also see assets.lisp for where we now
+;; load textures in :srgb8-alpha8
+
+;;------------------------------------------------------------
+
 (defvar *last-time* (get-internal-real-time))
 
 (defvar *scene-fbo* nil)

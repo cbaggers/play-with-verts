@@ -23,7 +23,6 @@
             uv
             (/ (- (z view-pos)) 100f0))))
 
-
 (defun-g some-frag-stage ((frag-normal :vec3)
                           (world-pos :vec3)
                           (uv :vec2)
@@ -35,9 +34,11 @@
   (let* ((albedo (texture albedo uv))
          (ambient 0.2)
          (dir-to-light (normalize (v! 1 1 1)))
-         (diffuse (saturate
-                   (dot dir-to-light
-                        (normalize frag-normal))))
+         (point-light-strength 1)
+         (diffuse (* (saturate
+                      (dot dir-to-light
+                           (normalize frag-normal)))
+                     point-light-strength))
          (light-amount (+ ambient diffuse)))
     (v! (s~ (* albedo light-amount) :xyz)
         lin-depth)))
