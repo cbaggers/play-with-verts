@@ -32,42 +32,15 @@
                           (albedo :sampler-2d)
                           (alt-sam :sampler-2d)
                           (now :float))
-  (labels ((albedo-edge ((edge :float)
-                         (effect-dist :float))
-             (mix (texture alt-sam uv)
-                  (texture albedo uv)
-                  (smoothstep edge (+ edge 2) effect-dist)))
-           (albedo-band ((edge :float)
-                         (effect-dist :float))
-             (let* ((thickness 1)
-                    (band (/ (max (+ thickness
-                                     (- (expt (- effect-dist edge) 2)))
-                                  0)
-                             thickness)))
-               (mix (texture albedo uv)
-                    (texture alt-sam uv)
-                    band))))
-    (let* (;; calculate the region of influence of the effect
-           (focus (v! (* (sin now) 10) 0 0))
-           (pos-diff (- world-pos focus))
-           (pos-diff-norm (normalize (s~ pos-diff :xz)))
-           (effect-dist (length pos-diff))
-           (edge (+ 5 (* (+ 1 (sin now)) 10)))
-
-           ;; make the edge wavy
-           (angle (v2:angle-from (v! 0 1) pos-diff-norm))
-           (edge (+ edge (sin (+ (* 10 (+ now angle))))))
-
-           ;; uncomment one of these effects
-           (albedo (albedo-edge edge effect-dist))
-           ;;(albedo (albedo-band edge effect-dist))
-
-           (ambient 0.2)
-           (dir-to-light (normalize (v! 1 1 1)))
-           (diffuse (saturate (dot dir-to-light (normalize frag-normal))))
-           (light-amount (+ ambient diffuse)))
-      (v! (s~ (* albedo light-amount) :xyz)
-          lin-depth))))
+  (let* ((albedo (texture albedo uv))
+         (ambient 0.2)
+         (dir-to-light (normalize (v! 1 1 1)))
+         (diffuse (saturate
+                   (dot dir-to-light
+                        (normalize frag-normal))))
+         (light-amount (+ ambient diffuse)))
+    (v! (s~ (* albedo light-amount) :xyz)
+        lin-depth)))
 
 (defpipeline-g some-pipeline ()
   (some-vert-stage g-pnt)
