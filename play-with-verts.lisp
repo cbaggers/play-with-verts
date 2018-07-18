@@ -20,9 +20,9 @@
   (setf (clear-color) (v! 0.002 0.002 0.002 0))
   (setf *things* nil)
   (make-ground)
-  (make-box (v! 0 30 15) (v! 30 60 2))
   (make-box (v! 0 30 -15) (v! 30 60 2))
   (make-box (v! 15 30 0) (v! 2 60 30))
+  (make-box (v! -15 30 0) (v! 2 60 30))
   (loop :for i :below 10 :do
        (make-ball (v! (- (random 20f0) 10f0)
                       (+ 3 (random 40f0))
