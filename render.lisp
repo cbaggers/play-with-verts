@@ -43,7 +43,8 @@
           (* (saturate (dot dir-to-light frag-normal))
              (plight-strength light))))
     (* point-light-strength
-       (attenuate (length vec-to-light)))))
+       (attenuate (length vec-to-light))
+       (plight-color light))))
 
 (defun-g some-frag-stage ((frag-normal :vec3)
                           (pos :vec3)
@@ -59,12 +60,15 @@
          ;;
          (albedo (gamma-correct (s~ (texture albedo uv) :xyz)))
          ;;
-         (diffuse (calc-light pos normal (aref plights 0)))
-         ;;
-         (ambient 0.0)
-         (light-amount (+ ambient diffuse))
-         (color (s~ (* albedo light-amount) :xyz) 0 ))
-    (v! (gamma-encode color) 0)))
+         (ambient (v! 0 0 0))
+         (diffuse-power (v! 0 0 0)))
+    ;;
+    (dotimes (i 3)
+      (incf diffuse-power (calc-light pos normal (aref plights i))))
+    ;;
+    (let* ((light-amount (+ ambient diffuse-power))
+           (color (* albedo light-amount) 0))
+      (v! (gamma-encode color) 0))))
 
 (defpipeline-g some-pipeline ()
   (some-vert-stage g-pnt)
@@ -84,8 +88,8 @@
 
 (defun make-lights ()
   (make-ubo
-   (list (list (list (v! 0 4 0) (v! 1.0 1.0 1.0) 300.8)
-               (list (v! 1000 -1000 1000) (v! 0.0 1.0 0.0) 0.0)
+   (list (list (list (v! 0 4 0) (v! 1.0 1.0 1.0) 200.8)
+               (list (v! 10 40 10) (v! 0.0 1.0 0.0) 60.0)
                (list (v! 1000 -1000 1000) (v! 0.0 0.0 1.0) 0.0)))
    'light-set))
 
