@@ -2,6 +2,33 @@
 
 ;;------------------------------------------------------------
 
+(defvar *lights* nil)
+
+(defstruct-g (plight :layout :std-430)
+  (pos :vec3)
+  (color :vec3)
+  (strength :float))
+
+(defstruct-g (light-set :layout :std-430)
+  (plights (plight 3)))
+
+(defun make-lights ()
+  (make-ssbo
+   (list (list (list (v! 0 4 0) (v! 1.0 1.0 1.0) 200.8)
+               (list (v! 10 40 10) (v! 0.0 1.0 0.0) 30.0)
+               (list (v! 1000 -1000 1000) (v! 0.0 0.0 1.0) 0.0)))
+   'light-set))
+
+(defun reset-lights ()
+  (when *lights*
+    (free *lights*))
+  (setf *lights* (make-lights)))
+
+(defun-g wat (&uniform (hmm light-set :ssbo :std-430))
+  (plight-color (aref (light-set-plights hmm) 0)))
+
+;;------------------------------------------------------------
+
 ;; We will use this function as our vertex shader
 (defun-g some-vert-stage ((vert g-pnt)
                           &uniform
@@ -52,7 +79,7 @@
                           &uniform
                           (albedo :sampler-2d)
                           (now :float)
-                          (lights light-set :ubo :std-140))
+                          (lights light-set :ssbo :std-430))
 
   (let* (;; process inputs
          (plights (light-set-plights lights))
@@ -75,25 +102,3 @@
   (some-frag-stage :vec3 :vec3 :vec2))
 
 ;;------------------------------------------------------------
-
-(defvar *lights* nil)
-
-(defstruct-g (plight :layout :std-140)
-  (pos :vec3)
-  (color :vec3)
-  (strength :float))
-
-(defstruct-g light-set
-  (plights (plight 3)))
-
-(defun make-lights ()
-  (make-ubo
-   (list (list (list (v! 0 4 0) (v! 1.0 1.0 1.0) 200.8)
-               (list (v! 10 40 10) (v! 0.0 1.0 0.0) 60.0)
-               (list (v! 1000 -1000 1000) (v! 0.0 0.0 1.0) 0.0)))
-   'light-set))
-
-(defun reset-lights ()
-  (when *lights*
-    (free *lights*))
-  (setf *lights* (make-lights)))

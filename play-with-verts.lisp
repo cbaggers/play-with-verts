@@ -37,8 +37,6 @@
         (sample (attachment-tex *scene-fbo* 0)))
   (setf *scene-depth-sampler*
         (sample (attachment-tex *scene-fbo* :d)))
-  (unless *alt-sampler*
-    (setf *alt-sampler* (tex "rust.jpg")))
   (reset-lights))
 
 (defun game-step ()
