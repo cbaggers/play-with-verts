@@ -15,7 +15,7 @@
 (defun make-lights ()
   (make-ssbo
    (list (list (list (v! 0 4 0) (v! 1.0 1.0 1.0) 200.8)
-               (list (v! 10 40 10) (v! 0.0 1.0 0.0) 30.0)
+               (list (v! 1000 -1000 1000) (v! 0.0 1.0 0.0) 0.0)
                (list (v! 1000 -1000 1000) (v! 0.0 0.0 1.0) 0.0)))
    'light-set))
 
@@ -69,9 +69,8 @@
          (point-light-strength
           (* (saturate (dot dir-to-light frag-normal))
              (plight-strength light))))
-    (* point-light-strength
-       (attenuate (length vec-to-light))
-       (plight-color light))))
+    (vec3 (* point-light-strength
+             (attenuate (length vec-to-light))))))
 
 (defun-g some-frag-stage ((frag-normal :vec3)
                           (pos :vec3)
