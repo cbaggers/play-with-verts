@@ -2,30 +2,10 @@
 
 ;;------------------------------------------------------------
 
-(defvar *lights* nil)
-
 (defstruct-g (plight :layout :std-430)
   (pos :vec3)
   (color :vec3)
   (strength :float))
-
-(defstruct-g (light-set :layout :std-430)
-  (plights (plight 3)))
-
-(defun make-lights ()
-  (make-ssbo
-   (list (list (list (v! 0 4 0) (v! 1.0 1.0 1.0) 200.8)
-               (list (v! 1000 -1000 1000) (v! 0.0 1.0 0.0) 0.0)
-               (list (v! 1000 -1000 1000) (v! 0.0 0.0 1.0) 0.0)))
-   'light-set))
-
-(defun reset-lights ()
-  (when *lights*
-    (free *lights*))
-  (setf *lights* (make-lights)))
-
-(defun-g wat (&uniform (hmm light-set :ssbo :std-430))
-  (plight-color (aref (light-set-plights hmm) 0)))
 
 ;;------------------------------------------------------------
 
@@ -69,28 +49,28 @@
          (point-light-strength
           (* (saturate (dot dir-to-light frag-normal))
              (plight-strength light))))
-    (vec3 (* point-light-strength
-             (attenuate (length vec-to-light))))))
+    (* point-light-strength
+       (attenuate (length vec-to-light))
+       (plight-color light))))
 
 (defun-g some-frag-stage ((frag-normal :vec3)
                           (pos :vec3)
                           (uv :vec2)
                           &uniform
                           (albedo :sampler-2d)
-                          (now :float)
-                          (lights light-set :ssbo :std-430))
+                          (now :float))
 
   (let* (;; process inputs
-         (plights (light-set-plights lights))
          (normal (normalize frag-normal))
          ;;
          (albedo (gamma-correct (s~ (texture albedo uv) :xyz)))
          ;;
-         (ambient (v! 0 0 0))
-         (diffuse-power (v! 0 0 0)))
-    ;;
-    (dotimes (i 3)
-      (incf diffuse-power (calc-light pos normal (aref plights i))))
+         (ambient (vec3 0.015))
+         (light (make-plight (v! 0 4 0)
+                             (v! 1 1 1)
+                             100))
+         (diffuse-power (calc-light pos normal light)))
+
     ;;
     (let* ((light-amount (+ ambient diffuse-power))
            (color (* albedo light-amount) 0))

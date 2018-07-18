@@ -30,8 +30,7 @@
          :world->view (get-world->view-space camera)
          :view->clip (projection camera)
          :albedo (sampler thing)
-         :now (now)
-         :lights *lights*))
+         :now (now)))
 
 (defmethod update ((thing thing) dt) nil)
 
