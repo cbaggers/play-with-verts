@@ -28,9 +28,9 @@
         (m4:translation (v3:negate (pos camera)))))
 
 (defmethod update ((camera camera) dt)
-  (let ((factor 10))
+  (let ((factor 30))
     (when (keyboard-button (keyboard) key.lshift)
-      (setf factor 20))
+      (setf factor 40))
 
     (when (keyboard-button (keyboard) key.w)
       (v3:incf (pos camera)

@@ -49,28 +49,26 @@
 ;; Box
 
 (defclass box (thing)
-  ((stream :initform (box 2 2 2))
+  ((stream :initarg :stream)
    (sampler :initform (tex "scratched.jpg"))))
 
-(defun make-box ()
-  (let ((obj (make-instance 'box)))
-    (setf (pos obj) (v! (- (random 30f0) 15f0)
-                        (+ 3 (random 20f0))
-                        (- (random 30f0) 15f0)))
+(defun make-box (pos &optional (size (v! 2 2 2)))
+  (check-type pos vec3)
+  (check-type size vec3)
+  (let ((obj (make-instance 'box :stream (box (x size) (y size) (z size)))))
+    (setf (pos obj) pos)
     (push obj *things*)))
 
 ;;------------------------------------------------------------
 ;; Ball
 
 (defclass ball (thing)
-  ((stream :initform (sphere 3))
+  ((stream :initarg :stream )
    (sampler :initform (tex "blue.jpg"))))
 
-(defun make-ball ()
-  (let ((obj (make-instance 'ball)))
-    (setf (pos obj) (v! (- (random 30f0) 15f0)
-                        (+ 3 (random 20f0))
-                        (- (random 30f0) 15f0)))
+(defun make-ball (pos &optional (radius 3))
+  (let ((obj (make-instance 'ball :stream (sphere radius))))
+    (setf (pos obj) pos)
     (push obj *things*)))
 
 ;;------------------------------------------------------------

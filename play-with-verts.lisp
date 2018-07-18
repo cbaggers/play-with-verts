@@ -17,13 +17,18 @@
 (defvar *scene-depth-sampler* nil)
 
 (defun reset ()
-  (setf (clear-color) (v! 1 1 1 1))
+  (setf (clear-color) (v! 0.002 0.002 0.002 0))
   (setf *things* nil)
   (make-ground)
+  (make-box (v! 0 30 15) (v! 30 60 2))
+  (make-box (v! 0 30 -15) (v! 30 60 2))
+  (make-box (v! 15 30 0) (v! 2 60 30))
+  (make-box (v! -15 30 0) (v! 2 60 30))
   (loop :for i :below 10 :do
-     (make-box))
-  (loop :for i :below 10 :do
-     (make-ball))
+       (make-ball (v! (- (random 20f0) 10f0)
+                      (+ 3 (random 40f0))
+                      (- (random 20f0) 10f0))
+                  2))
   (when *scene-fbo*
     (free *scene-fbo*))
   (setf *scene-fbo*
@@ -49,17 +54,11 @@
           (surface-resolution (current-surface)))
 
     ;; draw stuff
-    (with-fbo-bound (*scene-fbo*)
-      (clear-fbo *scene-fbo*)
-      (loop :for thing :in *things* :do
+    (clear)
+    (loop :for thing :in *things* :do
          (update thing delta)
-         (draw #'some-pipeline *current-camera* thing)))
-
-    (as-frame
-      ;;(radial-blur *scene-sampler*)
-      ;;(draw-tex *scene-sampler* :scale 1)
-      (blat *scene-sampler*)
-      )
+         (draw #'some-pipeline *current-camera* thing))
+    (swap)
 
     (decay-events)))
 
