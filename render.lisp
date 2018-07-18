@@ -109,7 +109,6 @@
                  (sam :sampler-2d)
                  (now :float))
   (let* ((col (s~ (texture sam uv) :xyz)))
-    (tone-map-hejl-burgess-dawson col 0.1)
     (tone-map-uncharted2 col 0.1 2f0)))
 
 (defpipeline-g quad-pline ()
@@ -122,3 +121,35 @@
          :now (now)))
 
 ;;------------------------------------------------------------
+
+(defun-g some-vert-stage ((vert g-pnt)
+                          &uniform
+                          (model->world :mat4)
+                          (world->view :mat4)
+                          (view->clip :mat4)))
+
+(defun-g line-v ((pos :vec3)
+                 &uniform
+                 (model->world :mat4)
+                 (world->view :mat4)
+                 (view->clip :mat4))
+  (let* ((model-pos (v! pos 1))
+         (world-pos (* model->world model-pos))
+         (view-pos (* world->view world-pos))
+         (clip-pos (* view->clip view-pos)))
+
+    clip-pos))
+
+(defun-g line-f ()
+  (v! 1 1 1 1))
+
+(defpipeline-g line-pline (:lines)
+  (line-v :vec3)
+  (line-f))
+
+(defun draw-line ()
+  (let ((camera *current-camera*))
+    (map-g #'line-pline tmp3
+           :model->world (m4:identity)
+           :world->view (get-world->view-space camera)
+           :view->clip (projection camera))))

@@ -53,6 +53,7 @@
     ;; draw stuff
     (with-fbo-bound (*scene-fbo*)
       (clear-fbo *scene-fbo*)
+      (draw-line)
       (loop :for thing :in *things* :do
            (update thing delta)
            (draw #'some-pipeline *current-camera* thing)))
