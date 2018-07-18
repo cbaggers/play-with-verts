@@ -66,12 +66,13 @@
          (albedo (gamma-correct (s~ (texture albedo uv) :xyz)))
          ;;
          (ambient (vec3 0.015))
-         (light0 (make-plight (v! 0 4 0)
-                              (v! 1 1 1)
-                              4000))
+         (light0 (make-plight
+                  (v! 0 4 0)
+                  (v! 1 1 1)
+                  (* 8000 (+ 1.2 (sin (* 2.8 now))))))
          (light1 (make-plight (v! -10 50 -10)
                               (v! 0 1 0)
-                              2000))
+                              1000))
          (diffuse-power0 (calc-light pos normal light0))
          (diffuse-power1 (calc-light pos normal light1)))
 
@@ -88,6 +89,16 @@
 
 ;;------------------------------------------------------------
 
+(defun-g reinhard-tonemap ((hdr-color :vec3))
+  (/ hdr-color (+ hdr-color (vec3 1f0))))
+
+(defun-g expose-tonemap ((hdr-color :vec3)
+                         (exposure :float))
+  (- (vec3 1) (exp (* (- hdr-color) exposure))))
+
+(defun-g expose-tonemap ((hdr-color :vec3))
+  (- (vec3 1) (exp (- hdr-color))))
+
 (defun-g quad-v ((vert :vec2))
   (values
    (v! vert 0 1)
@@ -95,8 +106,11 @@
 
 (defun-g quad-f ((uv :vec2)
                  &uniform
-                 (sam :sampler-2d))
-  (texture sam uv))
+                 (sam :sampler-2d)
+                 (now :float))
+  (let* ((col (s~ (texture sam uv) :xyz)))
+    (tone-map-hejl-burgess-dawson col 0.1)
+    (tone-map-uncharted2 col 0.1 2f0)))
 
 (defpipeline-g quad-pline ()
   (quad-v :vec2)
@@ -104,6 +118,7 @@
 
 (defun splat (sampler)
   (map-g #'quad-pline (get-quad-stream-v2)
-         :sam sampler))
+         :sam sampler
+         :now (now)))
 
 ;;------------------------------------------------------------
