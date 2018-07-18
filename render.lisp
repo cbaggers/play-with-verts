@@ -66,13 +66,19 @@
          (albedo (gamma-correct (s~ (texture albedo uv) :xyz)))
          ;;
          (ambient (vec3 0.015))
-         (light (make-plight (v! 0 4 0)
-                             (v! 1 1 1)
-                             1000))
-         (diffuse-power (calc-light pos normal light)))
+         (light0 (make-plight (v! 0 4 0)
+                              (v! 1 1 1)
+                              4000))
+         (light1 (make-plight (v! -10 50 -10)
+                              (v! 0 1 0)
+                              2000))
+         (diffuse-power0 (calc-light pos normal light0))
+         (diffuse-power1 (calc-light pos normal light1)))
 
     ;;
-    (let* ((light-amount (+ ambient diffuse-power))
+    (let* ((light-amount (+ ambient
+                            diffuse-power0
+                            diffuse-power1))
            (color (* albedo light-amount) 0))
       (v! color 0))))
 
