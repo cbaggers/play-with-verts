@@ -68,16 +68,36 @@
          (ambient (vec3 0.015))
          (light (make-plight (v! 0 4 0)
                              (v! 1 1 1)
-                             100))
+                             1000))
          (diffuse-power (calc-light pos normal light)))
 
     ;;
     (let* ((light-amount (+ ambient diffuse-power))
            (color (* albedo light-amount) 0))
-      (v! (gamma-encode color) 0))))
+      (v! color 0))))
 
 (defpipeline-g some-pipeline ()
   (some-vert-stage g-pnt)
   (some-frag-stage :vec3 :vec3 :vec2))
+
+;;------------------------------------------------------------
+
+(defun-g quad-v ((vert :vec2))
+  (values
+   (v! vert 0 1)
+   (+ (* vert 0.5) 0.5)))
+
+(defun-g quad-f ((uv :vec2)
+                 &uniform
+                 (sam :sampler-2d))
+  (texture sam uv))
+
+(defpipeline-g quad-pline ()
+  (quad-v :vec2)
+  (quad-f :vec2))
+
+(defun splat (sampler)
+  (map-g #'quad-pline (get-quad-stream-v2)
+         :sam sampler))
 
 ;;------------------------------------------------------------

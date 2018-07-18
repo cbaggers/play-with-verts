@@ -32,7 +32,7 @@
   (when *scene-fbo*
     (free *scene-fbo*))
   (setf *scene-fbo*
-        (make-fbo 0 :d))
+        (make-fbo (list 0 :element-type :rgba16f) :d))
   (setf *scene-sampler*
         (sample (attachment-tex *scene-fbo* 0)))
   (setf *scene-depth-sampler*
@@ -52,10 +52,14 @@
           (surface-resolution (current-surface)))
 
     ;; draw stuff
+    (with-fbo-bound (*scene-fbo*)
+      (clear-fbo *scene-fbo*)
+      (loop :for thing :in *things* :do
+           (update thing delta)
+           (draw #'some-pipeline *current-camera* thing)))
+
     (clear)
-    (loop :for thing :in *things* :do
-         (update thing delta)
-         (draw #'some-pipeline *current-camera* thing))
+    (splat *scene-sampler*)
     (swap)
 
     (decay-events)))
