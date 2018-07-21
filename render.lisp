@@ -23,6 +23,22 @@
             uv
             (/ (- (z view-pos)) 100f0))))
 
+(defun-g ferris-bad-grain ((uv :vec2)
+                           (time :float)
+                           (grain-amount :float))
+  "Expected to be used as follows:
+   (* color (ferris-bad-grain uv time grain-amount))"
+  (let* ((grain-strength (* 50.0 grain-amount))
+         (v (* (+ (x uv) 4.0)
+               (+ (y uv) 4.0)
+               (+ time 10.0)
+               10.0))
+         (grain (* (saturate (- (mod (* (+ (mod v 13.0) 1.0)
+                                        (+ (mod v 123.0) 1.0))
+                                     0.01)
+                                0.005))
+                   grain-strength)))
+    (- 1.0 grain)))
 
 (defun-g some-frag-stage ((frag-normal :vec3)
                           (world-pos :vec3)
@@ -65,9 +81,11 @@
            (ambient 0.2)
            (dir-to-light (normalize (v! 1 1 1)))
            (diffuse (saturate (dot dir-to-light (normalize frag-normal))))
-           (light-amount (+ ambient diffuse)))
-      (v! (s~ (* albedo light-amount) :xyz)
-          lin-depth))))
+           (light-amount (+ ambient diffuse))
+           (col (* albedo light-amount))
+           (col+grain (* col (ferris-bad-grain uv now 0.7)))
+           (col3 (s~ col+grain :xyz)))
+      (v! col3 (rgb->luma-bt601 col3)))))
 
 (defpipeline-g some-pipeline ()
   (some-vert-stage g-pnt)
