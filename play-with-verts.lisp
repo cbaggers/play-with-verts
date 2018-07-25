@@ -17,9 +17,10 @@
 (defvar *scene-depth-sampler* nil)
 
 (defun reset ()
-  (setf (clear-color) (v! 0.002 0.002 0.002 0))
+  (setf (clear-color) (v! 0.2 0.2 0.2 0))
   (setf *things* nil)
   (make-ground)
+  (make-box (v! 0 15 -20) (v! 30 30 1))
   (when *scene-fbo*
     (free *scene-fbo*))
   (setf *scene-fbo*
@@ -36,8 +37,12 @@
          (set (aref-c light-data 0))
          (plights (light-set-plights set)))
     (setf (light-set-count set) 2)
-    (setf (aref-c plights 0) (list (v! 0 4 0) (v! 1 1 1) 4000.0)
-          (aref-c plights 1) (list (v! -10 50 -10) (v! 0 1 0) 1000.0))
+    (setf (aref-c plights 0) (list (v! 0 5 -18)
+                                   (v! 1 1 1)
+                                   4000.0)
+          (aref-c plights 1) (list (v! -10 500 -10)
+                                   (v! 0 1 0)
+                                   1000.0))
     (setf *lights-arr* (make-gpu-array light-data)
           *lights* (make-ubo *lights-arr* 'light-set))))
 

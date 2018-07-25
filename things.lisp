@@ -24,7 +24,9 @@
   (m4:* (m4:translation (pos thing))
         (q:to-mat4 (rot thing))))
 
-(defmethod draw ((pipeline function) (camera camera) (thing thing))
+(defmethod draw ((pipeline function)
+                 (camera camera)
+                 (thing thing))
   (map-g pipeline (buf-stream thing)
          :model->world (get-model->world-space thing)
          :world->view (get-world->view-space camera)
