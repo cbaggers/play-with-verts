@@ -29,20 +29,25 @@
         (sample (attachment-tex *scene-fbo* 0)))
   (setf *scene-depth-sampler*
         (sample (attachment-tex *scene-fbo* :d)))
+
   (when *lights*
     (free *lights*)
     (free *lights-arr*))
+
   (let* ((light-data (make-c-array nil :dimensions 1
                                   :element-type 'light-set))
          (set (aref-c light-data 0))
          (plights (light-set-plights set)))
+
     (setf (light-set-count set) 2)
+
     (setf (aref-c plights 0) (list (v! 0 5 -18)
                                    (v! 1 1 1)
                                    4000.0)
           (aref-c plights 1) (list (v! -10 500 -10)
                                    (v! 0 1 0)
                                    1000.0))
+
     (setf *lights-arr* (make-gpu-array light-data)
           *lights* (make-ubo *lights-arr* 'light-set))))
 
@@ -64,7 +69,7 @@
       (clear-fbo *scene-fbo*)
       (loop :for thing :in *things* :do
            (update thing delta)
-           (draw #'some-pipeline *current-camera* thing)))
+           (draw *current-camera* thing)))
 
     (as-frame
       (fxaa3-pass *scene-sampler*))

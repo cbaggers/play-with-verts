@@ -18,6 +18,9 @@
    (rot
     :initarg :rot :initform (q:identity) :accessor rot)))
 
+(defclass thing-with-normals (thing)
+  ((normals :initform (get-tex "brickwall_normal.jpg"))))
+
 (defvar *things* nil)
 
 (defmethod get-model->world-space ((thing thing))
@@ -27,7 +30,18 @@
 (defmethod draw ((pipeline function)
                  (camera camera)
                  (thing thing))
-  (map-g pipeline (buf-stream thing)
+  (map-g #'some-pipeline (buf-stream thing)
+         :model->world (get-model->world-space thing)
+         :world->view (get-world->view-space camera)
+         :view->clip (projection camera)
+         :albedo (sampler thing)
+         :now (now)
+         :lights *lights*))
+
+(defmethod draw ((pipeline function)
+                 (camera camera)
+                 (thing thing-with-normals))
+  (map-g #'some-pipeline-with-norms (buf-stream thing)
          :model->world (get-model->world-space thing)
          :world->view (get-world->view-space camera)
          :view->clip (projection camera)
@@ -50,9 +64,10 @@
 ;;------------------------------------------------------------
 ;; Box
 
-(defclass box (thing)
+(defclass box (thing-with-normals)
   ((stream :initarg :stream)
-   (sampler :initform (get-tex "scratched.jpg"))))
+   (sampler :initform (get-tex "brickwall.jpg"))
+   (normals :initform (get-tex "brickwall_normal.jpg"))))
 
 (defun make-box (pos &optional (size (v! 2 2 2)))
   (check-type pos vec3)
