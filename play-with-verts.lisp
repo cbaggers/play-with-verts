@@ -17,7 +17,7 @@
 (defvar *scene-depth-sampler* nil)
 
 (defun reset ()
-  (setf (clear-color) (v! 0.2 0.2 0.2 0))
+  (setf (clear-color) (v! 0.2 0.2 0.2 1))
   (setf *things* nil)
   ;;(make-ground)
   (make-box (v! 0 0 0) (v! 40 1 40))
