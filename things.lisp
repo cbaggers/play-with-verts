@@ -16,11 +16,9 @@
    (pos
     :initarg :pos :initform (v! 0 0 0) :accessor pos)
    (rot
-    :initarg :rot :initform (q:identity) :accessor rot)))
-
-(defclass thing-with-normals (thing)
-  ((normals :initform (get-tex "brickwall_normal.jpg")
-            :accessor normals)))
+    :initarg :rot :initform (q:identity) :accessor rot)
+   (normals
+    :initarg :normals :initform nil :accessor normals)))
 
 (defvar *things* nil)
 
@@ -30,16 +28,6 @@
 
 (defmethod draw ((camera camera)
                  (thing thing))
-  (map-g #'some-pipeline (buf-stream thing)
-         :model->world (get-model->world-space thing)
-         :world->view (get-world->view-space camera)
-         :view->clip (projection camera)
-         :albedo (sampler thing)
-         :now (now)
-         :lights *lights*))
-
-(defmethod draw ((camera camera)
-                 (thing thing-with-normals))
   (map-g #'some-pipeline-with-norms (buf-stream thing)
          :model->world (get-model->world-space thing)
          :world->view (get-world->view-space camera)
@@ -64,7 +52,7 @@
 ;;------------------------------------------------------------
 ;; Box
 
-(defclass box (thing-with-normals)
+(defclass box (thing)
   ((stream :initarg :stream)
    (sampler :initform (get-tex "brickwall.jpg"))
    (normals :initform (get-tex "brickwall_normal.jpg"))))
@@ -80,8 +68,9 @@
 ;; Ball
 
 (defclass ball (thing)
-  ((stream :initarg :stream )
-   (sampler :initform (get-tex "blue.jpg"))))
+  ((stream :initarg :stream)
+   (sampler :initform (get-tex "brickwall.jpg"))
+   (normals :initform (get-tex "brickwall_normal.jpg"))))
 
 (defun make-ball (pos &optional (radius 3))
   (let ((obj (make-instance 'ball :stream (sphere radius))))

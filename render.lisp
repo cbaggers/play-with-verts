@@ -83,44 +83,6 @@
        (attenuate (length vec-to-light))
        (plight-color light))))
 
-(defun-g some-frag-stage ((frag-normal :vec3)
-                          (pos :vec3)
-                          (uv :vec2)
-                          (tbn :mat3)
-                          &uniform
-                          (albedo :sampler-2d)
-                          (now :float)
-                          (lights light-set :ubo))
-
-  (let* (;; process inputs
-         (normal (normalize frag-normal))
-         ;;
-         (albedo (gamma-correct (s~ (texture albedo uv) :xyz)))
-         ;;
-         (ambient (vec3 *ambient*))
-         (diffuse-power (vec3 0.0)))
-    ;;
-    (with-slots (plights count) lights
-      (dotimes (i count)
-        (incf diffuse-power
-              (calc-light pos
-                          normal
-                          (aref plights i)
-                          (v! 0 0 0)))))
-    ;;
-    (let* ((light-amount (+ ambient diffuse-power))
-           (color (* albedo light-amount))
-           (final-color (tone-map-uncharted2
-                         color *exposure* 2f0))
-           (luma (rgb->luma-bt601 final-color)))
-      (v! final-color luma))))
-
-(defpipeline-g some-pipeline ()
-  (some-vert-stage g-pnt tb-data)
-  (some-frag-stage :vec3 :vec3 :vec2 :mat3))
-
-;;------------------------------------------------------------
-
 (defun-g frag-stage-with-norms ((frag-normal :vec3)
                                 (pos :vec3)
                                 (uv :vec2)
@@ -154,12 +116,16 @@
             (calc-light pos
                         normal
                         (aref plights 0)
-                        (v! 0 (+ 8 (* 5 (sin now))) 0)))
+                        (v! 0
+                            (+ 8 (* 5 (sin now)))
+                            0)))
       (incf diffuse-power
             (calc-light pos
                         normal
                         (aref plights 1)
-                        (v! (+ 8 (* 10 (sin now))) 1 0))))
+                        (v! (+ 8 (* 10 (sin (* 1.5 now))))
+                            1
+                            0))))
     ;;
     (let* ((light-amount (+ ambient diffuse-power))
            (color (* albedo light-amount))

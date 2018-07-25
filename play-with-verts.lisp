@@ -22,6 +22,7 @@
   ;;(make-ground)
   (make-box (v! 0 0 0) (v! 40 1 40))
   (make-box (v! 0 15 -20) (v! 30 30 1))
+  (make-ball (v! 0 10 20) 3.0)
   (when *scene-fbo*
     (free *scene-fbo*))
   (setf *scene-fbo*

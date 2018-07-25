@@ -14,7 +14,8 @@
         (destructuring-bind (vert index)
             (nineveh.mesh.data.primitives:sphere-gpu-arrays :radius radius)
           (setf (gethash key *meshes*)
-                (make-buffer-stream vert :index-array index))))))
+                (make-buffer-stream (list vert (test vert index))
+                                    :index-array index))))))
 
 (defun box (&optional (w 1f0) (h 1f0) (d 1f0))
   (let ((key (list w h d)))
@@ -24,7 +25,7 @@
                                                          :height h
                                                          :depth d)
           (setf (gethash key *meshes*)
-                (make-buffer-stream (list vert (test2 vert index))
+                (make-buffer-stream (list vert (test vert index))
                                     :index-array index))))))
 
 (defun cylinder (&optional (radius 1f0) (height 1f0))
@@ -34,7 +35,8 @@
             (nineveh.mesh.data.primitives:cylinder-gpu-arrays :radius radius
                                                               :height height)
           (setf (gethash key *meshes*)
-                (make-buffer-stream vert :index-array index))))))
+                (make-buffer-stream (list vert (test vert index))
+                                    :index-array index))))))
 
 (defun cone (&optional (radius 1f0) (height 1f0))
   (let ((key (list radius height)))
@@ -43,7 +45,8 @@
             (nineveh.mesh.data.primitives:cone-gpu-arrays :radius radius
                                                           :height height)
           (setf (gethash key *meshes*)
-                (make-buffer-stream vert :index-array index))))))
+                (make-buffer-stream (list vert (test vert index))
+                                    :index-array index))))))
 
 ;;------------------------------------------------------------
 ;; Textures & Samplers
