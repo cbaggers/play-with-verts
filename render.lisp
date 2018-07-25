@@ -13,6 +13,8 @@
 
 (defvar *lights* nil)
 (defvar *lights-arr* nil)
+(defparameter *exposure* 0.3f0)
+(defparameter *ambient* 0.0f0)
 
 ;;------------------------------------------------------------
 
@@ -102,9 +104,6 @@
   (some-frag-stage :vec3 :vec3 :vec2))
 
 ;;------------------------------------------------------------
-
-(defparameter *exposure* 0.3f0)
-(defparameter *ambient* 0.0f0)
 
 (defun-g frag-stage-with-norms ((frag-normal :vec3)
                                 (pos :vec3)
