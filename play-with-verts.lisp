@@ -30,7 +30,6 @@
         (sample (attachment-tex *scene-fbo* 0)))
   (setf *scene-depth-sampler*
         (sample (attachment-tex *scene-fbo* :d)))
-
   (when *lights*
     (free *lights*)
     (free *lights-arr*))
@@ -44,10 +43,10 @@
 
     (setf (aref-c plights 0) (list (v! 0 5 -18)
                                    (v! 1 1 1)
-                                   300.0)
+                                   1300.0)
           (aref-c plights 1) (list (v! 0 1 10)
                                    (v! 1 1 1)
-                                   200.0))
+                                   1200.0))
 
     (setf *lights-arr* (make-gpu-array light-data)
           *lights* (make-ubo *lights-arr* 'light-set))))

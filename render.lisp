@@ -13,7 +13,7 @@
 
 (defvar *lights* nil)
 (defvar *lights-arr* nil)
-(defparameter *exposure* 0.3f0)
+(defparameter *exposure* 0.1f0)
 (defparameter *ambient* 0.0f0)
 
 ;;------------------------------------------------------------
@@ -23,6 +23,7 @@
 
 ;; We will use this function as our vertex shader
 (defun-g some-vert-stage ((vert g-pnt)
+                          (tb tb-data)
                           &uniform
                           (model->world :mat4)
                           (world->view :mat4)
@@ -34,12 +35,26 @@
          (world-pos (* model->world model-pos))
          (view-pos (* world->view world-pos))
          (world-norm (* (m4:to-mat3 model->world) normal))
-         (clip-pos (* view->clip view-pos)))
-
+         (clip-pos (* view->clip view-pos))
+         ;;
+         (t0 (normalize
+              (s~ (* model->world
+                     (v! (tb-data-tangent tb) 0))
+                  :xyz)))
+         (b0 (normalize
+              (s~ (* model->world
+                     (v! (tb-data-bitangent tb) 0))
+                  :xyz)))
+         (n0 (normalize
+              (s~ (* model->world
+                     (v! normal 0))
+                  :xyz)))
+         (tbn (mat3 t0 b0 n0)))
     (values clip-pos
             world-norm
             (s~ world-pos :xyz)
-            uv)))
+            uv
+            tbn)))
 
 (defun-g lin-attenuate ((dist :float))
   (/ 1f0 dist))
@@ -56,12 +71,9 @@
 (defun-g calc-light ((frag-pos :vec3)
                      (frag-normal :vec3)
                      (light plight)
-                     (now :float))
+                     (offset :vec3))
   (let* ((pos (+ (plight-pos light)
-                 ;; (v! 0
-                 ;;     (+ 5 (* (sin now) 5))
-                 ;;     0)
-                 ))
+                 offset))
          (vec-to-light (- pos frag-pos))
          (dir-to-light (normalize vec-to-light))
          (point-light-strength
@@ -74,6 +86,7 @@
 (defun-g some-frag-stage ((frag-normal :vec3)
                           (pos :vec3)
                           (uv :vec2)
+                          (tbn :mat3)
                           &uniform
                           (albedo :sampler-2d)
                           (now :float)
@@ -90,7 +103,10 @@
     (with-slots (plights count) lights
       (dotimes (i count)
         (incf diffuse-power
-              (calc-light pos normal (aref plights i) now))))
+              (calc-light pos
+                          normal
+                          (aref plights i)
+                          (v! 0 0 0)))))
     ;;
     (let* ((light-amount (+ ambient diffuse-power))
            (color (* albedo light-amount))
@@ -100,14 +116,15 @@
       (v! final-color luma))))
 
 (defpipeline-g some-pipeline ()
-  (some-vert-stage g-pnt)
-  (some-frag-stage :vec3 :vec3 :vec2))
+  (some-vert-stage g-pnt tb-data)
+  (some-frag-stage :vec3 :vec3 :vec2 :mat3))
 
 ;;------------------------------------------------------------
 
 (defun-g frag-stage-with-norms ((frag-normal :vec3)
                                 (pos :vec3)
                                 (uv :vec2)
+                                (tbn :mat3)
                                 &uniform
                                 (albedo :sampler-2d)
                                 (normal-map :sampler-2d)
@@ -129,18 +146,20 @@
          (ambient (vec3 *ambient*))
          (diffuse-power (vec3 0.0))
          ;;
-         (normal ;; (if (> (sin now) 0)
-                 ;;     normal
-                 ;;     norm-from-map)
-          norm-from-map))
+         (normal (* tbn norm-from-map))
+         (now (* 2.5 now)))
     ;;
     (with-slots (plights count) lights
-      (dotimes (i count)
-        (incf diffuse-power
-              (calc-light pos
-                          normal
-                          (aref plights i)
-                          now))))
+      (incf diffuse-power
+            (calc-light pos
+                        normal
+                        (aref plights 0)
+                        (v! 0 (+ 8 (* 5 (sin now))) 0)))
+      (incf diffuse-power
+            (calc-light pos
+                        normal
+                        (aref plights 1)
+                        (v! (+ 8 (* 10 (sin now))) 1 0))))
     ;;
     (let* ((light-amount (+ ambient diffuse-power))
            (color (* albedo light-amount))
@@ -150,5 +169,5 @@
       (v! final-color luma))))
 
 (defpipeline-g some-pipeline-with-norms ()
-  (some-vert-stage g-pnt)
-  (frag-stage-with-norms :vec3 :vec3 :vec2))
+  (some-vert-stage g-pnt tb-data)
+  (frag-stage-with-norms :vec3 :vec3 :vec2 :mat3))

@@ -24,7 +24,8 @@
                                                          :height h
                                                          :depth d)
           (setf (gethash key *meshes*)
-                (make-buffer-stream vert :index-array index))))))
+                (make-buffer-stream (list vert (test2 vert index))
+                                    :index-array index))))))
 
 (defun cylinder (&optional (radius 1f0) (height 1f0))
   (let ((key (list radius height)))
