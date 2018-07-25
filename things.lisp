@@ -27,8 +27,7 @@
   (m4:* (m4:translation (pos thing))
         (q:to-mat4 (rot thing))))
 
-(defmethod draw ((pipeline function)
-                 (camera camera)
+(defmethod draw ((camera camera)
                  (thing thing))
   (map-g #'some-pipeline (buf-stream thing)
          :model->world (get-model->world-space thing)
@@ -38,8 +37,7 @@
          :now (now)
          :lights *lights*))
 
-(defmethod draw ((pipeline function)
-                 (camera camera)
+(defmethod draw ((camera camera)
                  (thing thing-with-normals))
   (map-g #'some-pipeline-with-norms (buf-stream thing)
          :model->world (get-model->world-space thing)
