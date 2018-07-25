@@ -65,14 +65,14 @@
          ;;
          (albedo (gamma-correct (s~ (texture albedo uv) :xyz)))
          ;;
-         (ambient (vec3 0.015))
+         (ambient (vec3 0.001))
          (light0 (make-plight
                   (v! 0 4 0)
                   (v! 1 1 1)
-                  (* 8000 (+ 1.2 (sin (* 2.8 now))))))
+                  (* 10 (+ 1.2 (sin (* 2.8 now))))))
          (light1 (make-plight (v! -10 50 -10)
                               (v! 0 1 0)
-                              1000))
+                              1))
          (diffuse-power0 (calc-light pos normal light0))
          (diffuse-power1 (calc-light pos normal light1)))
 
@@ -109,7 +109,7 @@
                  (sam :sampler-2d)
                  (now :float))
   (let* ((col (s~ (texture sam uv) :xyz)))
-    (tone-map-uncharted2 col 0.1 2f0)))
+    (tone-map-uncharted2 col 1.0 2f0)))
 
 (defpipeline-g quad-pline ()
   (quad-v :vec2)
@@ -121,35 +121,3 @@
          :now (now)))
 
 ;;------------------------------------------------------------
-
-(defun-g some-vert-stage ((vert g-pnt)
-                          &uniform
-                          (model->world :mat4)
-                          (world->view :mat4)
-                          (view->clip :mat4)))
-
-(defun-g line-v ((pos :vec3)
-                 &uniform
-                 (model->world :mat4)
-                 (world->view :mat4)
-                 (view->clip :mat4))
-  (let* ((model-pos (v! pos 1))
-         (world-pos (* model->world model-pos))
-         (view-pos (* world->view world-pos))
-         (clip-pos (* view->clip view-pos)))
-
-    clip-pos))
-
-(defun-g line-f ()
-  (v! 1 1 1 1))
-
-(defpipeline-g line-pline (:lines)
-  (line-v :vec3)
-  (line-f))
-
-(defun draw-line ()
-  (let ((camera *current-camera*))
-    (map-g #'line-pline tmp3
-           :model->world (m4:identity)
-           :world->view (get-world->view-space camera)
-           :view->clip (projection camera))))
