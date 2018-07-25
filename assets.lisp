@@ -64,7 +64,7 @@
              (dirt:load-image-to-texture
               (asdf:system-relative-pathname
                :play-with-verts path)
-              :srgb8-alpha8
+              :rgba8
               mipmap
               t)))))
 

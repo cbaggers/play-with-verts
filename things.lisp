@@ -19,7 +19,8 @@
     :initarg :rot :initform (q:identity) :accessor rot)))
 
 (defclass thing-with-normals (thing)
-  ((normals :initform (get-tex "brickwall_normal.jpg"))))
+  ((normals :initform (get-tex "brickwall_normal.jpg")
+            :accessor normals)))
 
 (defvar *things* nil)
 
@@ -45,7 +46,8 @@
          :view->clip (projection camera)
          :albedo (sampler thing)
          :now (now)
-         :lights *lights*))
+         :lights *lights*
+         :normal-map (normals thing)))
 
 (defmethod update ((thing thing) dt) nil)
 
