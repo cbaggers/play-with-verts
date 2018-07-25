@@ -30,7 +30,8 @@
          :world->view (get-world->view-space camera)
          :view->clip (projection camera)
          :albedo (sampler thing)
-         :now (now)))
+         :now (now)
+         :lights *lights*))
 
 (defmethod update ((thing thing) dt) nil)
 
@@ -39,7 +40,7 @@
 
 (defclass ground (thing)
   ((stream :initform (box 40 1 40))
-   (sampler :initform (tex "floor.jpg"))))
+   (sampler :initform (get-tex "floor.jpg"))))
 
 (defun make-ground ()
   (push (make-instance 'ground) *things*))
@@ -49,7 +50,7 @@
 
 (defclass box (thing)
   ((stream :initarg :stream)
-   (sampler :initform (tex "scratched.jpg"))))
+   (sampler :initform (get-tex "scratched.jpg"))))
 
 (defun make-box (pos &optional (size (v! 2 2 2)))
   (check-type pos vec3)
@@ -63,7 +64,7 @@
 
 (defclass ball (thing)
   ((stream :initarg :stream )
-   (sampler :initform (tex "blue.jpg"))))
+   (sampler :initform (get-tex "blue.jpg"))))
 
 (defun make-ball (pos &optional (radius 3))
   (let ((obj (make-instance 'ball :stream (sphere radius))))

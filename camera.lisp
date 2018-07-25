@@ -19,9 +19,9 @@
 (defclass perspective-camera (camera)
   ((fov :initform 45f0 :accessor fov)))
 
-(defparameter *camera* (make-instance 'perspective-camera))
+(defparameter *camera-0* (make-instance 'perspective-camera))
 (defparameter *camera-1* (make-instance 'orthographic-camera))
-(defparameter *current-camera* *camera*)
+(defparameter *current-camera* *camera-0*)
 
 (defun get-world->view-space (camera)
   (m4:* (q:to-mat4 (q:inverse (rot camera)))
@@ -53,8 +53,8 @@
                         (q:from-axis-angle (v! 0 1 0) (- (x move)))))))))))
 
 (defun reset-camera (&optional (cam *current-camera*))
-  (setf (pos cam) (v! -0.43 25.33 43.20)
-        (rot cam) (v! 0.97 -0.20 -0.01 0.0))
+  (setf (pos cam) (v! 7.42 25.88 43.99)
+        (rot cam) (q! 0.96 -0.23 0.08 0.01))
   cam)
 
 (defmethod projection ((camera perspective-camera))

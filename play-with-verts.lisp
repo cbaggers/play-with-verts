@@ -20,14 +20,6 @@
   (setf (clear-color) (v! 0.002 0.002 0.002 0))
   (setf *things* nil)
   (make-ground)
-  (make-box (v! 0 30 -15) (v! 30 60 2))
-  (make-box (v! 15 30 0) (v! 2 60 30))
-  (make-box (v! -15 30 0) (v! 2 60 30))
-  (loop :for i :below 10 :do
-       (make-ball (v! (- (random 20f0) 10f0)
-                      (+ 3 (random 40f0))
-                      (- (random 20f0) 10f0))
-                  2))
   (when *scene-fbo*
     (free *scene-fbo*))
   (setf *scene-fbo*
@@ -35,7 +27,19 @@
   (setf *scene-sampler*
         (sample (attachment-tex *scene-fbo* 0)))
   (setf *scene-depth-sampler*
-        (sample (attachment-tex *scene-fbo* :d))))
+        (sample (attachment-tex *scene-fbo* :d)))
+  (when *lights*
+    (free *lights*)
+    (free *lights-arr*))
+  (let* ((light-data (make-c-array nil :dimensions 1
+                                  :element-type 'light-set))
+         (set (aref-c light-data 0))
+         (plights (light-set-plights set)))
+    (setf (light-set-count set) 2)
+    (setf (aref-c plights 0) (list (v! 0 4 0) (v! 1 1 1) 4000.0)
+          (aref-c plights 1) (list (v! -10 50 -10) (v! 0 1 0) 1000.0))
+    (setf *lights-arr* (make-gpu-array light-data)
+          *lights* (make-ubo *lights-arr* 'light-set))))
 
 (defun game-step ()
   (let* ((now (get-internal-real-time))
@@ -53,14 +57,12 @@
     ;; draw stuff
     (with-fbo-bound (*scene-fbo*)
       (clear-fbo *scene-fbo*)
-      (draw-line)
       (loop :for thing :in *things* :do
            (update thing delta)
            (draw #'some-pipeline *current-camera* thing)))
 
-    (clear)
-    (splat *scene-sampler*)
-    (swap)
+    (as-frame
+      (fxaa3-pass *scene-sampler*))
 
     (decay-events)))
 
