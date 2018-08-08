@@ -102,6 +102,9 @@
          (norm-from-map (s~ (texture normal-map uv) :xyz))
          (norm-from-map (normalize
                          (- (* norm-from-map 2.0) 1.0)))
+         (norm-from-map (v! (x norm-from-map)
+                            (- (y norm-from-map))
+                            (z norm-from-map)))
          ;;
          (albedo (gamma-correct (s~ (texture albedo uv) :xyz)))
          ;;
