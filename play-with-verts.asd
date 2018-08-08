@@ -13,7 +13,9 @@
                :rtg-math
                :rtg-math.vari
                :sdl2-game-controller-db
-               :with-setf)
+               :with-setf
+               :classimp-fallback-libs
+               :classimp)
   :components ((:file "package")
                (:file "utils")
                (:file "foo")

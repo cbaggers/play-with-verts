@@ -39,6 +39,15 @@
 
 (defmethod update ((thing thing) dt) nil)
 
+(defun free-thing (thing)
+  (with-slots (stream) thing
+    (destructuring-bind (arrs &optional iarr)
+        (buffer-stream-gpu-arrays stream)
+      (map nil #'free arrs)
+      (free iarr)
+      (free stream))
+    nil))
+
 ;;------------------------------------------------------------
 ;; Floor
 
@@ -76,5 +85,28 @@
   (let ((obj (make-instance 'ball :stream (sphere radius))))
     (setf (pos obj) pos)
     (push obj *things*)))
+
+;;------------------------------------------------------------
+;; Assimp thing
+
+(defclass assimp-thing (thing)
+  ((stream :initarg :stream)
+   (sampler :initform (get-tex "rust.jpg"))
+   (normals :initform nil)))
+
+(defun fuck-it (mesh)
+  (push (make-instance 'assimp-thing
+                       :stream (assimp-mesh-to-gpu-arrays mesh))
+        *things*))
+
+(defun load-scene (scene)
+  ())
+
+(defun free-all-assimp-things ()
+  (setf *things*
+        (loop :for i :in *things*
+           :if (typep i 'assimp-thing)
+           :do (free-thing i)
+           :else :collect i)))
 
 ;;------------------------------------------------------------
