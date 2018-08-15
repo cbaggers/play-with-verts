@@ -73,7 +73,9 @@
            (draw *current-camera* thing)))
 
     (as-frame
-      (fxaa3-pass *scene-sampler*))
+      (fxaa3-pass *scene-sampler*)
+      ;;(draw-tex tmp0)
+      )
 
     (decay-events)))
 

@@ -62,15 +62,17 @@
       (when s
         (free (sampler-texture s)))
       (remhash path *samplers*)))
-  (or (gethash path *samplers*)
-      (setf (gethash path *samplers*)
-            (sample
-             (dirt:load-image-to-texture
-              (asdf:system-relative-pathname
-               :play-with-verts path)
-              :rgba8
-              mipmap
-              t)))))
+  (let ((absolutep (uiop:absolute-pathname-p path)))
+    (or (gethash path *samplers*)
+        (setf (gethash path *samplers*)
+              (sample
+               (dirt:load-image-to-texture
+                (if absolutep
+                    path
+                    (asdf:system-relative-pathname :play-with-verts path))
+                :rgba8
+                mipmap
+                t))))))
 
 ;;------------------------------------------------------------
 
@@ -93,13 +95,13 @@
     (let* ((texture-coords (elt texture-coords 0))
            (material (aref (slot-value scene 'ai:materials) mat-index))
            (textures (gethash "$tex.file" material))
-           (sampler (get-tex "rust.jpg")
-            ;; (when textures
-            ;;   (get-tex
-            ;;    (merge-pathnames
-            ;;     (uiop:pathname-directory-pathname scene-path)
-            ;;     (third (assoc :ai-texture-type-diffuse textures)))))
-             ))
+           (sampler
+            (if (and textures (third (assoc :ai-texture-type-diffuse textures)))
+                (get-tex
+                 (merge-pathnames
+                  (uiop:pathname-directory-pathname scene-path)
+                  (third (assoc :ai-texture-type-diffuse textures))))
+                (get-tex "rust.jpg"))))
       (assert (= (length bitangents)
                  (length tangents)
                  (length normals)
@@ -143,7 +145,10 @@
                 :processing-flags
                 '(:ai-process-calc-tangent-space
                   :ai-process-triangulate
-                  :ai-process-gen-normals))))
+                  :ai-process-gen-normals
+                  ;; :ai-process-gen-uv-coords
+                  ;; :ai-process-transform-uv-coords
+                  ))))
     (loop
        :for mesh :across (slot-value scene 'ai:meshes)
        :for thing := (assimp-mesh-to-thing path scene mesh)
