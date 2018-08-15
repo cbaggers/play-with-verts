@@ -79,6 +79,43 @@
               (s~ world-pos :xyz)
               (treat-uvs uv)))))
 
+(defun-g assimp-norm-vert ((vert assimp-mesh)
+                           &uniform
+                           (model->world :mat4)
+                           (world->view :mat4)
+                           (view->clip :mat4)
+                           (scale :float))
+  (with-slots (pos normal uv) vert
+    (let* ((model-pos (v! (* pos scale) 1))
+           (world-pos (* model->world model-pos))
+           (world-norm (* (m4:to-mat3 model->world) normal))
+           (view-pos (* world->view world-pos))
+           (view-norm (* (mat4 (m4:to-mat3 world->view)) (v! world-norm 0)))
+           (clip-pos (* view->clip view-pos))
+           (clip-norm (* view->clip view-norm)))
+      (values clip-pos
+              (s~ clip-norm :xyz)))))
+
+(defun-g assimp-norm-geom ((normals (:vec3 3)))
+  (declare (output-primitive :kind :line-strip :max-vertices 6))
+  (labels ((gen-line ((index :int))
+             (let* ((magnitude 2)
+                    (p0 (gl-position (aref gl-in index)))
+                    (p1 (+ p0 (* (v! (aref normals index) 0) magnitude))))
+               (setf gl-position p0)
+               (emit-vertex)
+               (setf gl-position p1)
+               (emit-vertex)
+               (end-primitive)
+               (values))))
+    (gen-line 0)
+    (gen-line 1)
+    (gen-line 2)
+    (values)))
+
+(defun-g assimp-norm-frag ()
+  (v! 1 1 0 1))
+
 (defun-g lin-attenuate ((dist :float))
   (/ 1f0 dist))
 
@@ -194,7 +231,7 @@
             (calc-light pos
                         normal
                         (aref plights 1)
-                        (v! (+ 8 (* 10 (sin (* 1.5 now))))
+                        (v! (+ 8 (* 60 (sin (* 0.4 now))))
                             1
                             0))))
     ;;
@@ -212,3 +249,8 @@
 (defpipeline-g assimp-pipeline ()
   (assimp-vert-stage assimp-mesh)
   (assimp-frag-stage :vec3 :vec3 :vec2))
+
+(defpipeline-g assimp-norm-pipeline ()
+  :vertex (assimp-norm-vert assimp-mesh)
+  :geometry (assimp-norm-geom (:vec3 3))
+  :fragment (assimp-norm-frag))

@@ -122,6 +122,11 @@
          :albedo (sampler thing)
          :now (now)
          :lights *lights*
+         :scale (scale thing))
+  (map-g #'assimp-norm-pipeline (buf-stream thing)
+         :model->world (get-model->world-space thing)
+         :world->view (get-world->view-space camera)
+         :view->clip (projection camera)
          :scale (scale thing)))
 
 ;;------------------------------------------------------------
