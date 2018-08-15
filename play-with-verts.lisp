@@ -15,6 +15,7 @@
 (defvar *scene-fbo* nil)
 (defvar *scene-sampler* nil)
 (defvar *scene-depth-sampler* nil)
+(defvar *fallback-normal-map* nil)
 
 (defun reset ()
   (setf (clear-color) (v! 0.2 0.2 0.2 1))
@@ -31,6 +32,11 @@
         (sample (attachment-tex *scene-fbo* 0)))
   (setf *scene-depth-sampler*
         (sample (attachment-tex *scene-fbo* :d)))
+  (setf *fallback-normal-map*
+        (sample
+         (make-texture (list (list (v! 0 0 1)))
+                       :dimensions '(1 1)
+                       :mipmap nil)))
   (when *lights*
     (free *lights*)
     (free *lights-arr*))
@@ -74,7 +80,7 @@
 
     (as-frame
       (fxaa3-pass *scene-sampler*)
-      ;;(draw-tex tmp0)
+      ;; (draw-tex tmp1)
       )
 
     (decay-events)))

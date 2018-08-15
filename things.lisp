@@ -35,7 +35,8 @@
          :albedo (sampler thing)
          :now (now)
          :lights *lights*
-         :normal-map (normals thing)))
+         :normal-map (or (normals thing)
+                         *fallback-normal-map*)))
 
 (defmethod update ((thing thing) dt) nil)
 
@@ -108,5 +109,15 @@
            :if (typep i 'assimp-thing)
            :do (free-thing i)
            :else :collect i)))
+
+(defmethod draw ((camera camera)
+                 (thing assimp-thing))
+  (map-g #'assimp-pipeline (buf-stream thing)
+         :model->world (get-model->world-space thing)
+         :world->view (get-world->view-space camera)
+         :view->clip (projection camera)
+         :albedo (sampler thing)
+         :now (now)
+         :lights *lights*))
 
 ;;------------------------------------------------------------

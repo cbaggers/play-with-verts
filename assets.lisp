@@ -79,9 +79,9 @@
 (defstruct-g assimp-mesh
   (pos :vec3)
   (normal :vec3)
+  (uv :vec2)
   (tangent :vec3)
-  (bitangent :vec3)
-  (uv :vec2))
+  (bitangent :vec3))
 
 (defun assimp-mesh-to-thing (scene-path scene mesh)
   (with-slots ((vertices ai:vertices)
@@ -145,7 +145,7 @@
                 :processing-flags
                 '(:ai-process-calc-tangent-space
                   :ai-process-triangulate
-                  :ai-process-gen-normals
+                  :ai-process-gen-smooth-normals
                   ;; :ai-process-gen-uv-coords
                   ;; :ai-process-transform-uv-coords
                   ))))
