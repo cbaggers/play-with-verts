@@ -77,7 +77,7 @@
       (values clip-pos
               world-norm
               (s~ world-pos :xyz)
-              uv))))
+              (treat-uvs uv)))))
 
 (defun-g lin-attenuate ((dist :float))
   (/ 1f0 dist))
