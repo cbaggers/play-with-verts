@@ -38,12 +38,15 @@
          (make-texture (list (list (v! 0 0 1)))
                        :dimensions '(1 1)
                        :mipmap nil)))
+  (reset-lights))
+
+(defun reset-lights ()
   (when *lights*
     (free *lights*)
     (free *lights-arr*))
 
   (let* ((light-data (make-c-array nil :dimensions 1
-                                  :element-type 'light-set))
+                                   :element-type 'light-set))
          (set (aref-c light-data 0))
          (plights (light-set-plights set)))
 
@@ -52,9 +55,9 @@
     (setf (aref-c plights 0) (list (v! 0 5 -18)
                                    (v! 1 1 1)
                                    1300.0)
-          (aref-c plights 1) (list (v! 0 1 10)
+          (aref-c plights 1) (list (v! 0 120 24)
                                    (v! 1 1 1)
-                                   1200.0))
+                                   3200.0))
 
     (setf *lights-arr* (make-gpu-array light-data)
           *lights* (make-ubo *lights-arr* 'light-set))))

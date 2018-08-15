@@ -231,7 +231,7 @@
             (calc-light pos
                         normal
                         (aref plights 1)
-                        (v! (+ 8 (* 60 (sin (* 0.4 now))))
+                        (v! (+ 8 (* 100 (sin (* 0.7 now))))
                             1
                             0))))
     ;;

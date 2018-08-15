@@ -100,7 +100,7 @@
                 (get-tex
                  (merge-pathnames
                   (uiop:pathname-directory-pathname scene-path)
-                  (third (assoc :ai-texture-type-diffuse textures))))
+                  (substitute #\/ #\\ (third (assoc :ai-texture-type-diffuse textures)))))
                 (get-tex "rust.jpg"))))
       (assert (= (length bitangents)
                  (length tangents)
@@ -138,7 +138,7 @@
                        :scale scale)))))
 
 (defun test2 ()
-  (load-assimp-things "/home/baggers/3dModels/sponza.obj" 10f0))
+  (load-assimp-things "/home/baggers/3dModels/newsponz/sponza.obj" 0.2f0))
 
 (defun load-assimp-things (path &optional (scale 1f0))
   (let ((scene (classimp:import-into-lisp
@@ -146,7 +146,7 @@
                 :processing-flags
                 '(:ai-process-calc-tangent-space
                   :ai-process-triangulate
-                  :ai-process-gen-smooth-normals
+                  ;; :ai-process-gen-smooth-normals
                   ;; :ai-process-gen-uv-coords
                   ;; :ai-process-transform-uv-coords
                   ))))
