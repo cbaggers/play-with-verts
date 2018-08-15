@@ -27,8 +27,9 @@
                           &uniform
                           (model->world :mat4)
                           (world->view :mat4)
-                          (view->clip :mat4))
-  (let* ((pos (pos vert))
+                          (view->clip :mat4)
+                          (scale :float))
+  (let* ((pos (* (pos vert) scale))
          (normal (norm vert))
          (uv (treat-uvs (tex vert)))
          (model-pos (v! pos 1))
@@ -60,9 +61,10 @@
                             &uniform
                             (model->world :mat4)
                             (world->view :mat4)
-                            (view->clip :mat4))
+                            (view->clip :mat4)
+                            (scale :float))
   (with-slots (pos normal uv) vert
-    (let* ((model-pos (v! pos 1))
+    (let* ((model-pos (v! (* pos scale) 1))
            (world-pos (* model->world model-pos))
            (view-pos (* world->view world-pos))
            (world-norm (* (m4:to-mat3 model->world) normal))

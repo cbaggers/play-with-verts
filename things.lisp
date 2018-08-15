@@ -18,7 +18,9 @@
    (rot
     :initarg :rot :initform (q:identity) :accessor rot)
    (normals
-    :initarg :normals :initform nil :accessor normals)))
+    :initarg :normals :initform nil :accessor normals)
+   (scale
+    :initarg :scale :initform 1f0 :accessor scale)))
 
 (defvar *things* nil)
 
@@ -36,7 +38,8 @@
          :now (now)
          :lights *lights*
          :normal-map (or (normals thing)
-                         *fallback-normal-map*)))
+                         *fallback-normal-map*)
+         :scale (scale thing)))
 
 (defmethod update ((thing thing) dt) nil)
 
@@ -118,6 +121,7 @@
          :view->clip (projection camera)
          :albedo (sampler thing)
          :now (now)
-         :lights *lights*))
+         :lights *lights*
+         :scale (scale thing)))
 
 ;;------------------------------------------------------------

@@ -83,7 +83,7 @@
   (tangent :vec3)
   (bitangent :vec3))
 
-(defun assimp-mesh-to-thing (scene-path scene mesh)
+(defun assimp-mesh-to-thing (scene-path scene mesh scale)
   (with-slots ((vertices ai:vertices)
                (normals ai:normals)
                (tangents ai:tangents)
@@ -134,12 +134,13 @@
                        (assimp-mesh-uv a) (v! (x tc) (y tc)))))
         (make-instance 'assimp-thing
                        :stream (make-buffer-stream v-arr :index-array i-arr)
-                       :sampler sampler)))))
+                       :sampler sampler
+                       :scale scale)))))
 
 (defun test2 ()
-  (load-assimp-things "/home/baggers/3dModels/sponza.obj"))
+  (load-assimp-things "/home/baggers/3dModels/sponza.obj" 10f0))
 
-(defun load-assimp-things (path)
+(defun load-assimp-things (path &optional (scale 1f0))
   (let ((scene (classimp:import-into-lisp
                 path
                 :processing-flags
@@ -151,6 +152,6 @@
                   ))))
     (loop
        :for mesh :across (slot-value scene 'ai:meshes)
-       :for thing := (assimp-mesh-to-thing path scene mesh)
+       :for thing := (assimp-mesh-to-thing path scene mesh scale)
        :do (push thing *things*)))
   t)
