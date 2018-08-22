@@ -92,15 +92,18 @@
                (faces ai:faces)
                (mat-index ai:material-index))
       mesh
+
     (let* ((texture-coords (elt texture-coords 0))
            (material (aref (slot-value scene 'ai:materials) mat-index))
            (textures (gethash "$tex.file" material))
+           (tex-file (and textures
+                          (third (assoc :ai-texture-type-diffuse textures))))
            (sampler
-            (if (and textures (third (assoc :ai-texture-type-diffuse textures)))
+            (if tex-file
                 (get-tex
                  (merge-pathnames
-                  (uiop:pathname-directory-pathname scene-path)
-                  (substitute #\/ #\\ (third (assoc :ai-texture-type-diffuse textures)))))
+                  (substitute #\/ #\\ (string-trim '(#\Space #\Tab) tex-file))
+                  (uiop:pathname-directory-pathname scene-path)))
                 (get-tex "rust.jpg"))))
       (assert (= (length bitangents)
                  (length tangents)
@@ -138,7 +141,7 @@
                        :scale scale)))))
 
 (defun test2 ()
-  (load-assimp-things "/home/baggers/3dModels/newsponz/sponza.obj" 0.2f0))
+  (load-assimp-things "sponza_obj/sponza.obj" 0.2f0))
 
 (defun load-assimp-things (path &optional (scale 1f0))
   (let ((scene (classimp:import-into-lisp
