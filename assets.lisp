@@ -83,6 +83,11 @@
   (tangent :vec3)
   (bitangent :vec3))
 
+(defun hack-asset-name (scene-path file-path)
+  (merge-pathnames
+   (substitute #\/ #\\ (string-trim '(#\Space #\Tab) file-path))
+   (uiop:pathname-directory-pathname scene-path)))
+
 (defun assimp-mesh-to-thing (scene-path scene mesh scale)
   (with-slots ((vertices ai:vertices)
                (normals ai:normals)
@@ -98,13 +103,18 @@
            (textures (gethash "$tex.file" material))
            (tex-file (and textures
                           (third (assoc :ai-texture-type-diffuse textures))))
+           (norm-file (and textures
+                           (third (assoc :ai-texture-type-height textures))))
            (sampler
             (if tex-file
                 (get-tex
-                 (merge-pathnames
-                  (substitute #\/ #\\ (string-trim '(#\Space #\Tab) tex-file))
-                  (uiop:pathname-directory-pathname scene-path)))
-                (get-tex "rust.jpg"))))
+                 (hack-asset-name scene-path tex-file))
+                (get-tex "rust.jpg")))
+           (norm-sampler
+            (if norm-file
+                (get-tex
+                 (hack-asset-name scene-path norm-file))
+                *fallback-normal-map*)))
       (assert (= (length bitangents)
                  (length tangents)
                  (length normals)
@@ -138,6 +148,7 @@
         (make-instance 'assimp-thing
                        :stream (make-buffer-stream v-arr :index-array i-arr)
                        :sampler sampler
+                       :normals norm-sampler
                        :scale scale)))))
 
 (defun test2 ()

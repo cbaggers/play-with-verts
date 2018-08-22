@@ -63,21 +63,31 @@
                             (world->view :mat4)
                             (view->clip :mat4)
                             (scale :float))
-  (with-slots (pos normal uv) vert
+  (with-slots (pos normal uv tangent bitangent) vert
     (let* ((model-pos (v! (* pos scale) 1))
            (world-pos (* model->world model-pos))
            (view-pos (* world->view world-pos))
            (world-norm (* (m4:to-mat3 model->world) normal))
            (clip-pos (* view->clip view-pos))
            ;;
+           (t0 (normalize
+                (s~ (* model->world
+                       (v! tangent 0))
+                    :xyz)))
+           (b0 (normalize
+                (s~ (* model->world
+                       (v! bitangent 0))
+                    :xyz)))
            (n0 (normalize
                 (s~ (* model->world
                        (v! normal 0))
-                    :xyz))))
+                    :xyz)))
+           (tbn (mat3 t0 b0 n0)))
       (values clip-pos
               world-norm
               (s~ world-pos :xyz)
-              (treat-uvs uv)))))
+              (treat-uvs uv)
+              tbn))))
 
 (defun-g assimp-norm-vert ((vert assimp-mesh)
                            &uniform
@@ -197,58 +207,13 @@
            (luma (rgb->luma-bt601 final-color)))
       (v! final-color luma))))
 
-(defun-g assimp-frag-stage ((frag-normal :vec3)
-                            (pos :vec3)
-                            (uv :vec2)
-                            &uniform
-                            (albedo :sampler-2d)
-                            (now :float)
-                            (lights light-set :ubo))
-  ;; // obtain normal from normal map in range [0,1]
-  ;; normal = texture(normalMap, fs_in.TexCoords).rgb;
-  ;; // transform normal vector to range [-1,1]
-  ;; normal = normalize(normal * 2.0 - 1.0);
-
-  (let* (;; process inputs
-         (normal (normalize frag-normal))
-         ;;
-         (albedo (gamma-correct (s~ (texture albedo uv) :xyz)))
-         ;;
-         (ambient (vec3 *ambient*))
-         (diffuse-power (vec3 0.0))
-         ;;
-         (now (* 2.5 now)))
-    ;;
-    (with-slots (plights count) lights
-      (incf diffuse-power
-            (calc-light pos
-                        normal
-                        (aref plights 0)
-                        (v! 0
-                            (+ 8 (* 5 (sin now)))
-                            0)))
-      (incf diffuse-power
-            (calc-light pos
-                        normal
-                        (aref plights 1)
-                        (v! (+ 8 (* 100 (sin (* 0.7 now))))
-                            1
-                            0))))
-    ;;
-    (let* ((light-amount (+ ambient diffuse-power))
-           (color (* albedo light-amount))
-           (final-color (tone-map-uncharted2
-                         color *exposure* 2f0))
-           (luma (rgb->luma-bt601 final-color)))
-      (v! final-color luma))))
-
 (defpipeline-g some-pipeline-with-norms ()
   (some-vert-stage g-pnt tb-data)
   (frag-stage-with-norms :vec3 :vec3 :vec2 :mat3))
 
 (defpipeline-g assimp-pipeline ()
   (assimp-vert-stage assimp-mesh)
-  (assimp-frag-stage :vec3 :vec3 :vec2))
+  (frag-stage-with-norms :vec3 :vec3 :vec2 :mat3))
 
 (defpipeline-g assimp-norm-pipeline ()
   :vertex (assimp-norm-vert assimp-mesh)

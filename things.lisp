@@ -95,8 +95,7 @@
 
 (defclass assimp-thing (thing)
   ((stream :initarg :stream)
-   (sampler :initform (get-tex "rust.jpg"))
-   (normals :initform nil)))
+   (sampler :initform (get-tex "rust.jpg"))))
 
 (defun fuck-it (mesh)
   (push (make-instance 'assimp-thing
@@ -120,6 +119,7 @@
          :world->view (get-world->view-space camera)
          :view->clip (projection camera)
          :albedo (sampler thing)
+         :normal-map (normals thing)
          :now (now)
          :lights *lights*
          :scale (scale thing))
