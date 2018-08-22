@@ -156,7 +156,7 @@
 
 (defun load-assimp-things (path &optional (scale 1f0))
   (let ((scene (classimp:import-into-lisp
-                path
+                (asdf:system-relative-pathname :play-with-verts path)
                 :processing-flags
                 '(:ai-process-calc-tangent-space
                   :ai-process-triangulate

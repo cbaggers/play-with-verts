@@ -24,7 +24,17 @@
   (make-box (v! 0 0 0) (v! 40 1 40))
   (make-box (v! 0 15 -20) (v! 30 30 1))
   (make-ball (v! 0 10 20) 3.0)
+  (setf *fallback-normal-map*
+        (sample
+         (make-texture (list (list (v! 0.5 0.5 1)))
+                       :dimensions '(1 1)
+                       :mipmap nil)))
   (test2)
+  (reset-fbos)
+  (reset-camera)
+  (reset-lights))
+
+(defun reset-fbos ()
   (when *scene-fbo*
     (free *scene-fbo*))
   (setf *scene-fbo*
@@ -32,13 +42,7 @@
   (setf *scene-sampler*
         (sample (attachment-tex *scene-fbo* 0)))
   (setf *scene-depth-sampler*
-        (sample (attachment-tex *scene-fbo* :d)))
-  (setf *fallback-normal-map*
-        (sample
-         (make-texture (list (list (v! 0.5 0.5 1)))
-                       :dimensions '(1 1)
-                       :mipmap nil)))
-  (reset-lights))
+        (sample (attachment-tex *scene-fbo* :d))))
 
 (defun reset-lights ()
   (when *lights*
