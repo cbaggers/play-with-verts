@@ -35,7 +35,7 @@
         (sample (attachment-tex *scene-fbo* :d)))
   (setf *fallback-normal-map*
         (sample
-         (make-texture (list (list (v! 0 0 1)))
+         (make-texture (list (list (v! 0.5 0.5 1)))
                        :dimensions '(1 1)
                        :mipmap nil)))
   (reset-lights))
@@ -50,12 +50,15 @@
          (set (aref-c light-data 0))
          (plights (light-set-plights set)))
 
-    (setf (light-set-count set) 2)
+    (setf (light-set-count set) 3)
 
     (setf (aref-c plights 0) (list (v! 0 5 -18)
                                    (v! 1 1 1)
                                    1300.0)
           (aref-c plights 1) (list (v! 0 120 24)
+                                   (v! 1 1 1)
+                                   3200.0)
+          (aref-c plights 2) (list (v! 200 15 -10)
                                    (v! 1 1 1)
                                    3200.0))
 

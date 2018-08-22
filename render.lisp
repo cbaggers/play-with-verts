@@ -140,10 +140,8 @@
 
 (defun-g calc-light ((frag-pos :vec3)
                      (frag-normal :vec3)
-                     (light plight)
-                     (offset :vec3))
-  (let* ((pos (+ (plight-pos light)
-                 offset))
+                     (light plight))
+  (let* ((pos (plight-pos light))
          (vec-to-light (- pos frag-pos))
          (dir-to-light (normalize vec-to-light))
          (point-light-strength
@@ -184,28 +182,22 @@
          (normal (* tbn norm-from-map))
          (now (* 2.5 now)))
     ;;
+
     (with-slots (plights count) lights
-      (incf diffuse-power
-            (calc-light pos
-                        normal
-                        (aref plights 0)
-                        (v! 0
-                            (+ 8 (* 5 (sin now)))
-                            0)))
-      (incf diffuse-power
-            (calc-light pos
-                        normal
-                        (aref plights 1)
-                        (v! (+ 8 (* 10 (sin (* 1.5 now))))
-                            1
-                            0))))
+      (dotimes (i count)
+        (incf diffuse-power
+              (calc-light pos
+                          normal
+                          (aref plights i)))))
     ;;
     (let* ((light-amount (+ ambient diffuse-power))
            (color (* albedo light-amount))
            (final-color (tone-map-uncharted2
                          color *exposure* 2f0))
            (luma (rgb->luma-bt601 final-color)))
-      (v! final-color luma))))
+      (v! final-color luma))
+    ;; (texture normal-map uv)
+    ))
 
 (defpipeline-g some-pipeline-with-norms ()
   (some-vert-stage g-pnt tb-data)
