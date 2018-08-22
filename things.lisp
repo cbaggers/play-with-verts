@@ -127,7 +127,8 @@
   ;;        :model->world (get-model->world-space thing)
   ;;        :world->view (get-world->view-space camera)
   ;;        :view->clip (projection camera)
-  ;;        :scale (scale thing))
+  ;;        :scale (scale thing)
+  ;;        :normal-map (normals thing))
   )
 
 ;;------------------------------------------------------------

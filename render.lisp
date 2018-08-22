@@ -89,19 +89,41 @@
               (treat-uvs uv)
               tbn))))
 
+
+
 (defun-g assimp-norm-vert ((vert assimp-mesh)
                            &uniform
                            (model->world :mat4)
                            (world->view :mat4)
                            (view->clip :mat4)
-                           (scale :float))
-  (with-slots (pos normal uv) vert
+                           (scale :float)
+                           (normal-map :sampler-2d))
+  (with-slots (pos normal uv tangent bitangent) vert
     (let* ((model-pos (v! (* pos scale) 1))
            (world-pos (* model->world model-pos))
-           (world-norm (* (m4:to-mat3 model->world) normal))
            (view-pos (* world->view world-pos))
-           (view-norm (* (mat4 (m4:to-mat3 world->view)) (v! world-norm 0)))
            (clip-pos (* view->clip view-pos))
+
+           (t0 (normalize
+                (s~ (* model->world
+                       (v! tangent 0))
+                    :xyz)))
+           (b0 (normalize
+                (s~ (* model->world
+                       (v! bitangent 0))
+                    :xyz)))
+           (n0 (normalize
+                (s~ (* model->world
+                       (v! normal 0))
+                    :xyz)))
+           (tbn (mat3 t0 b0 n0))
+
+           (world-norm (* (m4:to-mat3 model->world) normal))
+           (norm-from-map (norm-from-map normal-map uv))
+           (new-world-normal (* tbn norm-from-map))
+
+           (view-norm (* (mat4 (m4:to-mat3 world->view))
+                         (v! new-world-normal 0)))
            (clip-norm (* view->clip view-norm)))
       (values clip-pos
               (s~ clip-norm :xyz)))))
@@ -151,6 +173,14 @@
        (attenuate (length vec-to-light))
        (plight-color light))))
 
+(defun-g norm-from-map ((normal-map :sampler-2d) (uv :vec2))
+  (let* ((norm-from-map (s~ (texture normal-map uv) :xyz))
+         (norm-from-map (normalize
+                         (- (* norm-from-map 2.0) 1.0))))
+    (v! (x norm-from-map)
+        (- (y norm-from-map))
+        (z norm-from-map))))
+
 (defun-g frag-stage-with-norms ((frag-normal :vec3)
                                 (pos :vec3)
                                 (uv :vec2)
@@ -167,12 +197,7 @@
 
   (let* (;; process inputs
          (normal (normalize frag-normal))
-         (norm-from-map (s~ (texture normal-map uv) :xyz))
-         (norm-from-map (normalize
-                         (- (* norm-from-map 2.0) 1.0)))
-         (norm-from-map (v! (x norm-from-map)
-                            (- (y norm-from-map))
-                            (z norm-from-map)))
+         (norm-from-map (norm-from-map normal-map uv))
          ;;
          (albedo (gamma-correct (s~ (texture albedo uv) :xyz)))
          ;;
