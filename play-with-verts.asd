@@ -15,7 +15,8 @@
                :sdl2-game-controller-db
                :with-setf
                :classimp-fallback-libs
-               :classimp)
+               :classimp
+               :bodge-nuklear)
   :components ((:file "package")
                (:file "utils")
                (:file "foo")
@@ -23,4 +24,5 @@
                (:file "camera")
                (:file "render")
                (:file "things")
+               (:file "ui")
                (:file "play-with-verts")))
