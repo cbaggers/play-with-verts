@@ -39,7 +39,30 @@
          :lights *lights*
          :normal-map (or (normals thing)
                          *fallback-normal-map*)
-         :scale (scale thing)))
+         :scale (scale thing)
+         :mult 1.0)
+  ;; (map-g #'assimp-norm-pipeline (buf-stream thing)
+  ;;        :model->world (get-model->world-space thing)
+  ;;        :world->view (get-world->view-space camera)
+  ;;        :view->clip (projection camera)
+  ;;        :scale (scale thing)
+  ;;        :normal-map (normals thing))
+  )
+
+(defmethod draw ((camera camera)
+                 (thing ball))
+  (map-g #'some-pipeline-with-norms (buf-stream thing)
+         :model->world (get-model->world-space thing)
+         :world->view (get-world->view-space camera)
+         :view->clip (projection camera)
+         :albedo (sampler thing)
+         :now (now)
+         :lights *lights*
+         :normal-map (or (normals thing)
+                         *fallback-normal-map*)
+         :scale (scale thing)
+         :mult 100.0)
+  )
 
 (defmethod update ((thing thing) dt) nil)
 
@@ -122,7 +145,8 @@
          :normal-map (normals thing)
          :now (now)
          :lights *lights*
-         :scale (scale thing))
+         :scale (scale thing)
+         :mult 1.0)
   ;; (map-g #'assimp-norm-pipeline (buf-stream thing)
   ;;        :model->world (get-model->world-space thing)
   ;;        :world->view (get-world->view-space camera)

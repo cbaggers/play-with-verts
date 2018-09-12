@@ -189,7 +189,8 @@
                                 (albedo :sampler-2d)
                                 (normal-map :sampler-2d)
                                 (now :float)
-                                (lights light-set :ubo))
+                                (lights light-set :ubo)
+                                (mult :float))
   ;; // obtain normal from normal map in range [0,1]
   ;; normal = texture(normalMap, fs_in.TexCoords).rgb;
   ;; // transform normal vector to range [-1,1]
@@ -216,13 +217,66 @@
                           (aref plights i)))))
     ;;
     (let* ((light-amount (+ ambient diffuse-power))
-           (color (* albedo light-amount))
-           (final-color (tone-map-uncharted2
-                         color *exposure* 2f0))
-           (luma (rgb->luma-bt601 final-color)))
-      (v! final-color luma))
-    ;; (texture normal-map uv)
-    ))
+           (color (* albedo light-amount mult))
+           (brightness (dot color (v! 0.2126 0.7152 0.0722)))
+           (bright-color (if (> brightness 3)
+                             (v! color 1)
+                             (v! 0 0 0 1))))
+      (values
+       color
+       bright-color))))
+
+(defun-g hblur-vert ((vert :vec2))
+  (values
+   (v! vert 0 1)
+   (+ (* vert 0.5) 0.5)))
+
+(defun-g hblur-frag ((uv :vec2)
+                     &uniform
+                     (image :sampler-2d)
+                     (horizontal :bool))
+  (let* ((weight (vector 0.227027 0.1945946 0.1216216 0.054054 0.016216))
+         (tex-offset (/ 1.0 (texture-size image 0)))
+         (result (* (s~ (texture image uv) :xyz) (aref weight 0))))
+    (if horizontal
+        (for (i 1) (< i 5) (++ i)
+             (incf result (* (s~ (texture image (+ uv (vec2 (* (x tex-offset) i) 0)))
+                                 :xyz)
+                             (aref weight i)))
+             (incf result (* (s~ (texture image (- uv (vec2 (* (x tex-offset) i) 0)))
+                                 :xyz)
+                             (aref weight i))))
+        (for (i 1) (< i 5) (++ i)
+             (incf result (* (s~ (texture image (+ uv (vec2 0 (* (y tex-offset) i))))
+                                 :xyz)
+                             (aref weight i)))
+             (incf result (* (s~ (texture image (- uv (vec2 0 (* (y tex-offset) i))))
+                                 :xyz)
+                             (aref weight i)))))
+    ;;(texture image uv)
+    (v! result 1)))
+
+(defpipeline-g hblur-pline ()
+  (hblur-vert :vec2)
+  (hblur-frag :vec2))
+
+
+
+(defun-g compose-frag ((uv :vec2)
+                       &uniform
+                       (sam0 :sampler-2d)
+                       (sam1 :sampler-2d))
+  (let* ((sum (+ (s~ (texture sam0 uv) :xyz)
+                 (s~ (texture sam1 uv) :xyz)))
+         (final-color (tone-map-uncharted2
+                       sum *exposure* 2f0))
+         (luma (rgb->luma-bt601 final-color))
+         (final-color (v! final-color luma)))
+    final-color))
+
+(defpipeline-g compose-bloom-pline ()
+  (hblur-vert :vec2)
+  (compose-frag :vec2))
 
 (defpipeline-g some-pipeline-with-norms ()
   (some-vert-stage g-pnt tb-data)
