@@ -16,6 +16,9 @@
                :with-setf
                :classimp-fallback-libs
                :classimp
+               :glad-blob
+               :bodge-glad
+               :nuklear-blob
                :bodge-nuklear)
   :components ((:file "package")
                (:file "utils")

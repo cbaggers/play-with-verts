@@ -16,8 +16,13 @@
 (defvar *scene-sampler* nil)
 (defvar *scene-depth-sampler* nil)
 (defvar *fallback-normal-map* nil)
+(defvar *glad* nil)
 
 (defun reset ()
+  (unless *glad*
+    (glad:init)
+    (setf *glad* t))
+  (init-ui)
   (setf (clear-color) (v! 0.2 0.2 0.2 1))
   (setf *things* nil)
   ;;(make-ground)
@@ -92,6 +97,7 @@
     (as-frame
       (fxaa3-pass *scene-sampler*)
       ;; (draw-tex tmp1)
+      ;; (step-ui)
       )
 
     (decay-events)))
