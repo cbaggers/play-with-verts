@@ -17,22 +17,23 @@
 (defvar *scene-depth-sampler* nil)
 (defvar *fallback-normal-map* nil)
 
-(defun reset ()
-  (setf (clear-color) (v! 0.2 0.2 0.2 1))
-  (setf *things* nil)
-  ;;(make-ground)
-  (make-box (v! 0 0 0) (v! 40 1 40))
-  (make-box (v! 0 15 -20) (v! 30 30 1))
-  (make-ball (v! 0 10 20) 3.0)
-  (setf *fallback-normal-map*
-        (sample
-         (make-texture (list (list (v! 0.5 0.5 1)))
-                       :dimensions '(1 1)
-                       :mipmap nil)))
-  (test2)
+(defun reset (&key force)
+  (when (or force (not *scene-fbo*))
+    (setf (clear-color) (v! 0.2 0.2 0.2 1))
+    (setf *things* nil)
+    ;;(make-ground)
+    (make-box (v! 0 0 0) (v! 40 1 40))
+    (make-box (v! 0 15 -20) (v! 30 30 1))
+    (make-ball (v! 0 10 20) 3.0)
+    (setf *fallback-normal-map*
+          (sample
+           (make-texture (list (list (v! 0.5 0.5 1)))
+                         :dimensions '(1 1)
+                         :mipmap nil)))
+    (test2)
+    (reset-lights))
   (reset-fbos)
-  (reset-camera)
-  (reset-lights))
+  (reset-camera))
 
 (defun reset-fbos ()
   (when *scene-fbo*
