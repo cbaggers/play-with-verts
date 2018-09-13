@@ -35,7 +35,7 @@
     (make-box (v! 0 15 -20) (v! 30 30 1))
     (make-ball (v! 0 10 20) 3.0)
     (setf *fallback-normal-map*
-          (samples
+          (sample
            (make-texture (list (list (v! 0.5 0.5 1)))
                          :dimensions '(1 1)
                          :mipmap nil)))
