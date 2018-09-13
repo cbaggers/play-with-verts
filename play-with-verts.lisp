@@ -140,7 +140,7 @@
            (draw *current-camera* thing)))
 
     (let ((horizontal t)
-          (amount 80)
+          (amount 20)
           (current-sampler *ping-sampler*)
           (next-sampler *pong-sampler*)
           (current-fbo *pong*)
