@@ -28,6 +28,11 @@
 
 (defvar *ball* nil)
 
+(defun set-camera (&optional (cam *current-camera*))
+  (setf (pos cam) (v! -64.55 129.96 2.0)
+        (rot cam) (q! 0.405 -0.052 -0.9 -0.086))
+  cam)
+
 (defun reset (&key force)
   (when (or force (not *scene-fbo*))
     (setf (clear-color) (v! 0.2 0.2 0.2 1))
@@ -45,7 +50,7 @@
     (test2)
     (reset-lights))
   (reset-fbos)
-  (reset-camera))
+  (set-camera))
 
 ;; GL_TEXTURE_MIN_FILTER, GL_LINEAR
 ;; GL_TEXTURE_MAG_FILTER, GL_LINEAR
