@@ -49,21 +49,6 @@
   ;;        :normal-map (normals thing))
   )
 
-(defmethod draw ((camera camera)
-                 (thing ball))
-  (map-g #'some-pipeline-with-norms (buf-stream thing)
-         :model->world (get-model->world-space thing)
-         :world->view (get-world->view-space camera)
-         :view->clip (projection camera)
-         :albedo (sampler thing)
-         :now (now)
-         :lights *lights*
-         :normal-map (or (normals thing)
-                         *fallback-normal-map*)
-         :scale (scale thing)
-         :mult 100.0)
-  )
-
 (defmethod update ((thing thing) dt) nil)
 
 (defun free-thing (thing)
@@ -156,3 +141,18 @@
   )
 
 ;;------------------------------------------------------------
+
+(defmethod draw ((camera camera)
+                 (thing ball))
+  (map-g #'some-pipeline-with-norms (buf-stream thing)
+         :model->world (get-model->world-space thing)
+         :world->view (get-world->view-space camera)
+         :view->clip (projection camera)
+         :albedo (sampler thing)
+         :now (now)
+         :lights *lights*
+         :normal-map (or (normals thing)
+                         *fallback-normal-map*)
+         :scale (scale thing)
+         :mult 100.0)
+  )
