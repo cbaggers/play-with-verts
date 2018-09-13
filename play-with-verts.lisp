@@ -26,6 +26,8 @@
 (defvar *scene-depth-sampler* nil)
 (defvar *fallback-normal-map* nil)
 
+(defvar *ball* nil)
+
 (defun reset (&key force)
   (when (or force (not *scene-fbo*))
     (setf (clear-color) (v! 0.2 0.2 0.2 1))
@@ -33,7 +35,8 @@
     ;;(make-ground)
     (make-box (v! 0 0 0) (v! 40 1 40))
     (make-box (v! 0 15 -20) (v! 30 30 1))
-    (make-ball (v! 0 10 20) 3.0)
+    (make-ball (v! 0 115 60) 10.0)
+    (setf *ball* (first *things*))
     (setf *fallback-normal-map*
           (sample
            (make-texture (list (list (v! 0.5 0.5 1)))
@@ -161,7 +164,7 @@
       ;;(draw-tex *scene-sampler*)
       )
 
-    (setf (x (pos ball)) (+ 40.0 (* (sin (now)) 60)))
+    (setf (x (pos *ball*)) (+ 40.0 (* (sin (now)) 60)))
 
     (decay-events)))
 
