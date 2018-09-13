@@ -169,7 +169,7 @@
       ;;(draw-tex *scene-sampler*)
       )
 
-    (setf (x (pos *ball*)) (+ 40.0 (* (sin (now)) 60)))
+    (setf (x (pos *ball*)) (+ 20.0 (* (sin (now)) 40)))
 
     (decay-events)))
 
