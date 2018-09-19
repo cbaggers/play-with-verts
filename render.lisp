@@ -208,18 +208,19 @@
          (normal (* tbn norm-from-map))
          (now (* 2.5 now)))
     ;;
-
-    (with-slots (plights count) lights
-      (dotimes (i count)
-        (incf diffuse-power
-              (calc-light pos
-                          normal
-                          (aref plights i)))))
+    (if (> mult 1.01)
+        (setf diffuse-power (vec3 1))
+        (with-slots (plights count) lights
+          (dotimes (i count)
+            (incf diffuse-power
+                  (calc-light pos
+                              normal
+                              (aref plights i))))))
     ;;
     (let* ((light-amount (+ ambient diffuse-power))
            (color (* albedo light-amount mult))
            (brightness (dot color (v! 0.2126 0.7152 0.0722)))
-           (bright-color (if (> brightness 3)
+           (bright-color (if (> brightness 2)
                              (v! color 1)
                              (v! 0 0 0 1))))
       (values

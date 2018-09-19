@@ -22,6 +22,7 @@
 (defvar *pong* nil)
 (defvar *ping-sampler* nil)
 (defvar *pong-sampler* nil)
+(defvar *light-ball* nil)
 
 (defvar *scene-depth-sampler* nil)
 (defvar *fallback-normal-map* nil)
@@ -34,8 +35,9 @@
     (make-box (v! 0 0 0) (v! 40 1 40))
     (make-box (v! 0 15 -20) (v! 30 30 1))
     (make-ball (v! 0 10 20) 3.0)
+    (setf *light-ball* (make-ball (v! 80 120 70) 8))
     (setf *fallback-normal-map*
-          (samples
+          (sample
            (make-texture (list (list (v! 0.5 0.5 1)))
                          :dimensions '(1 1)
                          :mipmap nil)))
@@ -132,7 +134,7 @@
            (draw *current-camera* thing)))
 
     (let ((horizontal t)
-          (amount 80)
+          (amount 40)
           (current-sampler *ping-sampler*)
           (next-sampler *pong-sampler*)
           (current-fbo *pong*)
@@ -161,7 +163,11 @@
       ;;(draw-tex *scene-sampler*)
       )
 
-    (setf (x (pos ball)) (+ 40.0 (* (sin (now)) 60)))
+    (setf (x (pos *light-ball*))
+          (* (sin (now)) 60))
+
+    (setf (y (pos *light-ball*))
+          (+ 120.0 (* (sin (* 0.1 (now))) 30)))
 
     (decay-events)))
 
