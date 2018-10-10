@@ -109,18 +109,24 @@
 
 (defmethod draw ((camera camera)
                  (thing ball))
-  (with-setf (cull-face) nil
-    (with-blending *disolve-params*
-      (map-g #'disolve-pipeline (buf-stream thing)
-             :model->world (get-model->world-space thing)
-             :world->view (get-world->view-space camera)
-             :view->clip (projection camera)
-             :albedo (sampler thing)
-             :now (now)
-             :lights *lights*
-             :normal-map (or (normals thing)
-                             *fallback-normal-map*)
-             :scale (scale thing)))))
+  (labels ((inner (inside)
+             (with-blending *disolve-params*
+               (map-g #'disolve-pipeline (buf-stream thing)
+                      :model->world
+                      (get-model->world-space thing)
+                      :world->view
+                      (get-world->view-space camera)
+                      :view->clip (projection camera)
+                      :albedo (sampler thing)
+                      :now (now)
+                      :lights *lights*
+                      :normal-map (or (normals thing)
+                                      *fallback-normal-map*)
+                      :scale (scale thing)
+                      :inside inside))))
+    (with-setf (cull-face) :front
+      (inner t))
+    (inner nil)))
 
 (defmethod draw ((camera camera)
                  (thing light-ball))
@@ -160,7 +166,7 @@
 
 (defmethod draw ((camera camera)
                  (thing assimp-thing))
-  (map-g #'disolve-pipeline (buf-stream thing)
+  (map-g #'assimp-pipeline (buf-stream thing)
          :model->world (get-model->world-space thing)
          :world->view (get-world->view-space camera)
          :view->clip (projection camera)
@@ -169,8 +175,7 @@
          :now (now)
          :lights *lights*
          :scale (scale thing)
-         ;;:mult 1.0
-         )
+         :mult 1.0)
   ;; (map-g #'assimp-norm-pipeline (buf-stream thing)
   ;;        :model->world (get-model->world-space thing)
   ;;        :world->view (get-world->view-space camera)

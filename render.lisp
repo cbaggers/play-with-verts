@@ -336,7 +336,8 @@
                        (albedo :sampler-2d)
                        (normal-map :sampler-2d)
                        (now :float)
-                       (lights light-set :ubo))
+                       (lights light-set :ubo)
+                       (inside :bool))
   ;; // obtain normal from normal map in range [0,1]
   ;; normal = texture(normalMap, fs_in.TexCoords).rgb;
   ;; // transform normal vector to range [-1,1]
@@ -370,19 +371,17 @@
                           now))))
            (edge (+ (abs (sin (* 0.1 now)))
                     n)))
-      (when (= 0 (step edge val))
-        (discard))
       (let* ((light-amount (+ ambient diffuse-power))
              (color (* albedo light-amount))
-             (color (if (< (- val edge) 0.02)
-                         (v! 0 7 0)
-                         color))
+             (color (if inside
+                        (v! 0 3 0)
+                        color))
              (brightness (dot color (v! 0.2126 0.7152 0.0722)))
              (bright-color (if (> brightness 2)
                                (v! color 1)
                                (v! 0 0 0 1))))
         (values
-         (v! color 1)
+         (v! color (smoothstep edge (+ edge 0.04) val))
          bright-color)))))
 
 (defun-g frag-disolve ((frag-normal :vec3)
@@ -393,13 +392,15 @@
                        (albedo :sampler-2d)
                        (normal-map :sampler-2d)
                        (now :float)
-                       (lights light-set :ubo))
+                       (lights light-set :ubo)
+                       (inside :bool))
   ;; // obtain normal from normal map in range [0,1]
   ;; normal = texture(normalMap, fs_in.TexCoords).rgb;
   ;; // transform normal vector to range [-1,1]
   ;; normal = normalize(normal * 2.0 - 1.0);
 
   (let* (;; process inputs
+         (uv (v! (+ (x uv) (* 0.3 now)) (y uv)))
          (normal (normalize frag-normal))
          (norm-from-map (norm-from-map normal-map uv))
          ;;
@@ -420,8 +421,10 @@
                            (aref plights i))
                0 1))))
     ;;
-    (let* ((val (+ (+ 0.5 (* 0.5 (perlin-noise
-                                  (v! (* 20 uv) (* 1 now)))))
+    (let* ((ppos (+ pos (v! 0 0 now)))
+           (val (+ (+ 0.9 (* 0.5 (+ (* 0.6 (perlin-noise ppos))
+                                    (perlin-noise (* 2 ppos))
+                                    (perlin-noise (* 4 ppos)))))
                    0.2
                    (* 3 (- 1 (y uv)))
                    (- (* 3 (abs (sin (* 0.2 now)))))))
@@ -430,7 +433,7 @@
         (discard))
       (let* ((light-amount (+ ambient diffuse-power))
              (color (* albedo light-amount))
-             (color (if (< (- val edge) 0.02)
+             (color (if (< (- val edge) 0.1)
                          (v! 0 7 0)
                          color))
              (brightness (dot color (v! 0.2126 0.7152 0.0722)))
