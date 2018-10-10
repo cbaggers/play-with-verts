@@ -160,7 +160,7 @@
 
 (defmethod draw ((camera camera)
                  (thing assimp-thing))
-  (map-g #'assimp-pipeline (buf-stream thing)
+  (map-g #'disolve-pipeline (buf-stream thing)
          :model->world (get-model->world-space thing)
          :world->view (get-world->view-space camera)
          :view->clip (projection camera)
@@ -169,7 +169,8 @@
          :now (now)
          :lights *lights*
          :scale (scale thing)
-         :mult 1.0)
+         ;;:mult 1.0
+         )
   ;; (map-g #'assimp-norm-pipeline (buf-stream thing)
   ;;        :model->world (get-model->world-space thing)
   ;;        :world->view (get-world->view-space camera)
