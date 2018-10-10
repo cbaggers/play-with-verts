@@ -213,9 +213,11 @@
         (with-slots (plights count) lights
           (dotimes (i count)
             (incf diffuse-power
-                  (calc-light pos
-                              normal
-                              (aref plights i))))))
+                  (clamp
+                   (calc-light pos
+                               normal
+                               (aref plights i))
+                   0 1)))))
     ;;
     (let* ((light-amount (+ ambient diffuse-power))
            (color (* albedo light-amount mult))
@@ -261,8 +263,6 @@
   (hblur-vert :vec2)
   (hblur-frag :vec2))
 
-
-
 (defun-g compose-frag ((uv :vec2)
                        &uniform
                        (sam0 :sampler-2d)
@@ -291,3 +291,100 @@
   :vertex (assimp-norm-vert assimp-mesh)
   :geometry (assimp-norm-geom (:vec3 3))
   :fragment (assimp-norm-frag))
+
+
+(defun-g vert-disolve ((vert g-pnt)
+                       (tb tb-data)
+                       &uniform
+                       (model->world :mat4)
+                       (world->view :mat4)
+                       (view->clip :mat4)
+                       (scale :float))
+  (let* ((pos (* (pos vert) scale))
+         (normal (norm vert))
+         (uv (treat-uvs (tex vert)))
+         (model-pos (v! pos 1))
+         (world-pos (* model->world model-pos))
+         (view-pos (* world->view world-pos))
+         (world-norm (* (m4:to-mat3 model->world) normal))
+         (clip-pos (* view->clip view-pos))
+         ;;
+         (t0 (normalize
+              (s~ (* model->world
+                     (v! (tb-data-tangent tb) 0))
+                  :xyz)))
+         (b0 (normalize
+              (s~ (* model->world
+                     (v! (tb-data-bitangent tb) 0))
+                  :xyz)))
+         (n0 (normalize
+              (s~ (* model->world
+                     (v! normal 0))
+                  :xyz)))
+         (tbn (mat3 t0 b0 n0)))
+    (values clip-pos
+            world-norm
+            (s~ world-pos :xyz)
+            uv
+            tbn)))
+
+(defun-g frag-disolve ((frag-normal :vec3)
+                       (pos :vec3)
+                       (uv :vec2)
+                       (tbn :mat3)
+                       &uniform
+                       (albedo :sampler-2d)
+                       (normal-map :sampler-2d)
+                       (now :float)
+                       (lights light-set :ubo))
+  ;; // obtain normal from normal map in range [0,1]
+  ;; normal = texture(normalMap, fs_in.TexCoords).rgb;
+  ;; // transform normal vector to range [-1,1]
+  ;; normal = normalize(normal * 2.0 - 1.0);
+
+  (let* (;; process inputs
+         (normal (normalize frag-normal))
+         (norm-from-map (norm-from-map normal-map uv))
+         ;;
+         (albedo (gamma-correct (s~ (texture albedo uv) :xyz)))
+         ;;
+         (ambient (vec3 *ambient*))
+         (diffuse-power (vec3 0.0))
+         ;;
+         (normal (* tbn norm-from-map))
+         (now (* 2.5 now)))
+    ;;
+    (with-slots (plights count) lights
+      (dotimes (i count)
+        (incf diffuse-power
+              (clamp
+               (calc-light pos
+                           normal
+                           (aref plights i))
+               0 1))))
+    ;;
+    (let* ((val (- 1 (y uv)))
+             (n (* 0.1 (perlin-noise
+                        (v! (* 4 (sin (* 2 pi-f (x uv))))
+                            (* 4 (cos (* 2 pi-f (x uv))))
+                            now))))
+             (edge (+ (abs (sin (* 0.1 now)))
+                      n)))
+      (when (= 0 (step edge val))
+        (discard))
+      (let* ((light-amount (+ ambient diffuse-power))
+             (color (* albedo light-amount))
+             (color (if (< (- val edge) 0.02)
+                         (v! 0 7 0)
+                         color))
+             (brightness (dot color (v! 0.2126 0.7152 0.0722)))
+             (bright-color (if (> brightness 2)
+                               (v! color 1)
+                               (v! 0 0 0 1))))
+        (values
+         (v! color 1)
+         bright-color)))))
+
+(defpipeline-g disolve-pipeline ()
+  (vert-disolve g-pnt tb-data)
+  (frag-disolve :vec3 :vec3 :vec2 :mat3))

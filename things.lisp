@@ -93,14 +93,37 @@
    (sampler :initform (get-tex "brickwall.jpg"))
    (normals :initform (get-tex "brickwall_normal.jpg"))))
 
+(defclass light-ball (thing)
+  ((stream :initarg :stream)
+   (sampler :initform (get-tex "brickwall.jpg"))
+   (normals :initform (get-tex "brickwall_normal.jpg"))))
+
 (defun make-ball (pos &optional (radius 3))
   (let ((obj (make-instance 'ball :stream (sphere radius))))
     (setf (pos obj) pos)
     (push obj *things*)
     obj))
 
+(defvar *disolve-params*
+  (make-blending-params))
+
 (defmethod draw ((camera camera)
                  (thing ball))
+  (with-setf (cull-face) nil
+    (with-blending *disolve-params*
+      (map-g #'disolve-pipeline (buf-stream thing)
+             :model->world (get-model->world-space thing)
+             :world->view (get-world->view-space camera)
+             :view->clip (projection camera)
+             :albedo (sampler thing)
+             :now (now)
+             :lights *lights*
+             :normal-map (or (normals thing)
+                             *fallback-normal-map*)
+             :scale (scale thing)))))
+
+(defmethod draw ((camera camera)
+                 (thing light-ball))
   (map-g #'some-pipeline-with-norms (buf-stream thing)
          :model->world (get-model->world-space thing)
          :world->view (get-world->view-space camera)
@@ -111,8 +134,7 @@
          :normal-map (or (normals thing)
                          *fallback-normal-map*)
          :scale (scale thing)
-         :mult 1000.1)
-  )
+         :mult 1000.1))
 
 ;;------------------------------------------------------------
 ;; Assimp thing

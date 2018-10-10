@@ -129,7 +129,14 @@
     ;; draw stuff
     (with-fbo-bound (*scene-fbo*)
       (clear-fbo *scene-fbo*)
-      (loop :for thing :in *things* :do
+      (loop :for thing :in *things*
+         :when (not (typep thing 'ball))
+         :do
+           (update thing delta)
+           (draw *current-camera* thing))
+      (loop :for thing :in *things*
+         :when (typep thing 'ball)
+         :do
            (update thing delta)
            (draw *current-camera* thing)))
 
@@ -146,7 +153,7 @@
                  :image (if (= i 0)
                             *bright-sampler*
                             current-sampler)
-                 :horizontal (if horizontal 1 0))
+                 :horizontal horizontal)
           (setf horizontal (not horizontal))
           (rotatef current-sampler next-sampler)
           (rotatef current-fbo next-fbo)))
