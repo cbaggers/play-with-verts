@@ -45,18 +45,13 @@
          :mult 1.0))
 
 (defmethod los-draw ((camera camera)
-                 (thing thing))
-  (map-g #'thing-pipeline (buf-stream thing)
+                     (thing thing))
+  (map-g #'los-thing-pipeline (buf-stream thing)
          :model->world (get-model->world-space thing)
          :world->view (get-world->view-space camera)
          :view->clip (projection camera)
-         :albedo (sampler thing)
-         :now (now)
-         :lights *lights*
-         :normal-map (or (normals thing)
-                         *fallback-normal-map*)
          :scale (scale thing)
-         :mult 1.0))
+         :id (/ (slot-value thing 'id) 255f0)))
 
 (defmethod update ((thing thing) dt) nil)
 
@@ -87,10 +82,13 @@
 ;;------------------------------------------------------------
 ;; Ball
 
+(defvar *creature-id* 0)
+
 (defclass ball (thing)
   ((stream :initarg :stream)
    (sampler :initform (get-tex "brickwall.jpg"))
-   (normals :initform (get-tex "brickwall_normal.jpg"))))
+   (normals :initform (get-tex "brickwall_normal.jpg"))
+   (id :initform (incf *creature-id*))))
 
 
 (defun make-ball (pos &optional (radius 3))
@@ -127,16 +125,12 @@
          :mult 1.0))
 
 (defmethod los-draw ((camera camera)
-                 (thing assimp-thing))
-  (map-g #'assimp-thing-pipeline (buf-stream thing)
+                     (thing assimp-thing))
+  (map-g #'los-assimp-pipeline (buf-stream thing)
          :model->world (get-model->world-space thing)
          :world->view (get-world->view-space camera)
          :view->clip (projection camera)
-         :albedo (sampler thing)
-         :normal-map (normals thing)
-         :now (now)
-         :lights *lights*
          :scale (scale thing)
-         :mult 1.0))
+         :id 0f0))
 
 ;;------------------------------------------------------------

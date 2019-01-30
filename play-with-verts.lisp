@@ -1,5 +1,8 @@
 (in-package #:play-with-verts)
 
+(defstruct-g (los-results :layout std-430)
+  (data (:float 255)))
+
 (defvar *last-time* (get-internal-real-time))
 
 (defvar *scene-fbo* nil)
@@ -10,11 +13,12 @@
 (defclass los-scene ()
   ((cube-map :initarg :cube-map)
    (fbos :initarg :fbos)
-   (sampler :initarg :sampler)))
+   (sampler :initarg :sampler)
+   (ssbo :initarg :ssbo)))
 
 (defun make-los-scene ()
   (let ((scene (make-instance 'los-scene)))
-    (with-slots (cube-map fbos sampler) scene
+    (with-slots (cube-map fbos sampler ssbo) scene
       (setf cube-map (make-texture
                       nil
                       :element-type :uint8
@@ -22,8 +26,10 @@
                       :cubes t)
             fbos (loop :for i :below 6 :collect
                       (make-fbo
-                       (list 0 (texref cube-map :cube-face i))))
-            sampler (sample cube-map))
+                       (list 0 (texref cube-map :cube-face i))
+                       (list :d :dimensions '(512 512))))
+            sampler (sample cube-map)
+            ssbo (make-ssbo nil 'los-results))
       scene)))
 
 (defmethod free ((obj los-scene))
@@ -39,7 +45,7 @@
   ;;
   ;; on first startup
   (when (or force (not *scene-fbo*))
-    (setf (clear-color) (v! 0.2 0.2 0.2 0))
+    (setf (clear-color) (v! 0 0 0 0))
     (setf *things* nil)
     (setf *fallback-normal-map*
           (sample
@@ -117,7 +123,7 @@
       ;;(draw-tex *scene-sampler*)
       (draw-tex (slot-value *los-scene* 'sampler))
       )
-
+    (los-pass *los-scene* *camera-0*)
     (decay-events)))
 
 (defparameter *rotations*
@@ -129,6 +135,12 @@
                (q:from-direction (v! 0 1 0) (v! -1 0 0))
                (q:from-direction (v! 0 1 0) (v! 0 -1 0))
                (q:from-direction (v! 0 1 0) (v! 0 0 -1)))))
+
+(defparameter *empty-results*
+  (list
+   (make-array 255 :element-type 'single-float
+               :initial-contents
+               (loop :for i :below 255 :collect 0f0))))
 
 (defun draw-to-los-scene (los-scene camera)
   (when *current-creature*
@@ -143,6 +155,26 @@
              (clear-fbo fbo)
              (loop :for thing :in *things* :do
                   (los-draw camera thing)))))))
+
+(defun accum-los-results (los-scene)
+  (with-slots (ssbo sampler) los-scene
+    (map-g #'los-accumulate (get-quad-stream-v2)
+           :results ssbo
+           :cube-map sampler)
+    (let ((fence (make-gpu-fence)))
+      (wait-on-gpu-fence fence)
+      (free fence)
+      (first (first (pull-g (ssbo-data ssbo)))))))
+
+(defun los-pass (los-scene camera)
+  (push-g *empty-results*
+          (slot-value *los-scene* 'ssbo))
+  (draw-to-los-scene los-scene camera)
+  (let ((foo (accum-los-results los-scene)))
+    ;; (loop :for x :in foo
+    ;;    :when (> x 0f0)
+    ;;    :do (print "yay"))
+    foo))
 
 
 (def-simple-main-loop play (:on-start #'reset)
