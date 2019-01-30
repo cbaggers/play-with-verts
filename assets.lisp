@@ -76,10 +76,6 @@
 
 ;;------------------------------------------------------------
 
-(defstruct-g tb-data
-  (tangent :vec3)
-  (bitangent :vec3))
-
 (defstruct-g assimp-mesh
   (pos :vec3)
   (normal :vec3)
