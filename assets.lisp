@@ -76,6 +76,10 @@
 
 ;;------------------------------------------------------------
 
+(defstruct-g tb-data
+  (tangent :vec3)
+  (bitangent :vec3))
+
 (defstruct-g assimp-mesh
   (pos :vec3)
   (normal :vec3)
@@ -151,19 +155,12 @@
                        :normals norm-sampler
                        :scale scale)))))
 
-(defun test2 ()
-  (load-assimp-things "sponza_obj/sponza.obj" 0.2f0))
-
 (defun load-assimp-things (path &optional (scale 1f0))
   (let ((scene (classimp:import-into-lisp
                 (asdf:system-relative-pathname :play-with-verts path)
                 :processing-flags
                 '(:ai-process-calc-tangent-space
-                  :ai-process-triangulate
-                  ;; :ai-process-gen-smooth-normals
-                  ;; :ai-process-gen-uv-coords
-                  ;; :ai-process-transform-uv-coords
-                  ))))
+                  :ai-process-triangulate))))
     (loop
        :for mesh :across (slot-value scene 'ai:meshes)
        :for thing := (assimp-mesh-to-thing path scene mesh scale)
