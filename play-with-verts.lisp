@@ -5,6 +5,34 @@
 (defvar *scene-fbo* nil)
 (defvar *scene-sampler* nil)
 
+(defvar *los-scene* nil)
+
+(defclass los-scene ()
+  ((cube-map :initarg :cube-map)
+   (fbos :initarg :fbos)
+   (sampler :initarg :sampler)))
+
+(defun make-los-scene ()
+  (let ((scene (make-instance 'los-scene)))
+    (with-slots (cube-map fbos sampler) scene
+      (setf cube-map (make-texture
+                      nil
+                      :element-type :uint8
+                      :dimensions '(512 512)
+                      :cubes t)
+            fbos (loop :for i :below 6 :collect
+                      (make-fbo
+                       (list 0 (texref cube-map :cube-face i))))
+            sampler (sample cube-map))
+      scene)))
+
+(defmethod free ((obj los-scene))
+  (with-slots (cube-map fbos sampler) obj
+    (free cube-map)
+    (map nil #'free fbos)
+    (free sampler)
+    nil))
+
 (defvar *fallback-normal-map* nil)
 
 (defun reset (&key force)
@@ -89,6 +117,14 @@
       )
 
     (decay-events)))
+
+;; (defun foo ()
+;;   (with-fbo-bound (*scene-fbo*)
+;;     (clear-fbo *scene-fbo*)
+;;     (loop :for thing :in *things* :do
+;;          (update thing delta)
+;;          (draw *current-camera* thing))))
+
 
 (def-simple-main-loop play (:on-start #'reset)
   (game-step))

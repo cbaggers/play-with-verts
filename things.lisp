@@ -5,6 +5,8 @@
 
 (defvar *light-pos* (v! 0 30 -5))
 
+(defvar *current-creature* nil)
+
 ;;------------------------------------------------------------
 ;; Things
 
