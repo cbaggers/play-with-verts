@@ -158,6 +158,42 @@
 
 ;;------------------------------------------------------------
 
+(defun-g los-common ((pos :vec3)
+                     (scale :float)
+                     (model->world :mat4)
+                     (world->view :mat4)
+                     (view->clip :mat4))
+  (let* ((model-pos (v! (* pos scale) 1))
+         (world-pos (* model->world model-pos))
+         (view-pos (* world->view world-pos))
+         (clip-pos (* view->clip view-pos)))
+    (values clip-pos)))
+
+(defun-g thing-vert-stage ((vert g-pnt)
+                          (tb tb-data)
+                          &uniform
+                          (model->world :mat4)
+                          (world->view :mat4)
+                          (view->clip :mat4)
+                          (scale :float))
+  (los-common (pos vert) scale
+              model->world world->view view->clip))
+
+(defun-g assimp-vert-stage ((vert assimp-mesh)
+                            &uniform
+                            (model->world :mat4)
+                            (world->view :mat4)
+                            (view->clip :mat4)
+                            (scale :float))
+  (with-slots (pos normal uv tangent bitangent) vert
+    (los-common pos scale
+                model->world world->view view->clip)))
+
+(defun-g los-frag-stage (&uniform (id :uint8))
+  (v! id 0 0 1))
+
+;;------------------------------------------------------------
+
 (defpipeline-g thing-pipeline ()
   (thing-vert-stage g-pnt tb-data)
   (frag-stage :vec3 :vec3 :vec2 :mat3))

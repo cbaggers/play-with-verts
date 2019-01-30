@@ -17,10 +17,12 @@
 (defclass orthographic-camera (camera) ())
 
 (defclass perspective-camera (camera)
-  ((fov :initform 45f0 :accessor fov)))
+  ((fov :initform 45f0 :accessor fov :initarg :fov)))
 
 (defparameter *camera-0* (make-instance 'perspective-camera))
 (defparameter *camera-1* (make-instance 'orthographic-camera))
+(defparameter *camera-2* (make-instance 'perspective-camera
+                                        :fov 90f0))
 (defparameter *current-camera* *camera-0*)
 
 (defun get-world->view-space (camera)

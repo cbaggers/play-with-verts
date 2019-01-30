@@ -46,6 +46,7 @@
            (make-texture (list (list (v! 0.5 0.5 1)))
                          :dimensions '(1 1)
                          :mipmap nil)))
+    (setf *los-scene* (make-los-scene))
     ;;
     ;; Add some things to the scene
     (load-assimp-things "sponza_obj/sponza.obj" 0.2f0)
@@ -114,16 +115,34 @@
     (as-frame
       (fxaa3-pass *scene-sampler*)
       ;;(draw-tex *scene-sampler*)
+      (draw-tex (slot-value *los-scene* 'sampler))
       )
 
     (decay-events)))
 
-;; (defun foo ()
-;;   (with-fbo-bound (*scene-fbo*)
-;;     (clear-fbo *scene-fbo*)
-;;     (loop :for thing :in *things* :do
-;;          (update thing delta)
-;;          (draw *current-camera* thing))))
+(defparameter *rotations*
+  (make-array 6 :initial-contents
+              (list
+               (q:from-direction (v! 0 1 0) (v! 1 0 0))
+               (q:from-direction (v! 0 1 0) (v! 0 1 0))
+               (q:from-direction (v! 0 1 0) (v! 0 0 1))
+               (q:from-direction (v! 0 1 0) (v! -1 0 0))
+               (q:from-direction (v! 0 1 0) (v! 0 -1 0))
+               (q:from-direction (v! 0 1 0) (v! 0 0 -1)))))
+
+(defun draw-to-los-scene (los-scene camera)
+  (when *current-creature*
+    (setf (pos camera) (pos *current-creature*))
+    (with-slots (fbos) los-scene
+      (loop
+         :for i :below 6
+         :for fbo :in fbos
+         :do
+           (setf (rot camera) (aref *rotations* i))
+           (with-fbo-bound (fbo)
+             (clear-fbo fbo)
+             (loop :for thing :in *things* :do
+                  (los-draw camera thing)))))))
 
 
 (def-simple-main-loop play (:on-start #'reset)
