@@ -18,6 +18,7 @@
                :classimp)
   :components ((:file "package")
                (:file "utils")
+               (:file "foo")
                (:file "assets")
                (:file "camera")
                (:file "render")
