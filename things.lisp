@@ -30,7 +30,7 @@
 
 (defmethod draw ((camera camera)
                  (thing thing))
-  (map-g #'some-pipeline-with-norms (buf-stream thing)
+  (map-g #'thing-pipeline (buf-stream thing)
          :model->world (get-model->world-space thing)
          :world->view (get-world->view-space camera)
          :view->clip (projection camera)
@@ -40,14 +40,7 @@
          :normal-map (or (normals thing)
                          *fallback-normal-map*)
          :scale (scale thing)
-         :mult 1.0)
-  ;; (map-g #'assimp-norm-pipeline (buf-stream thing)
-  ;;        :model->world (get-model->world-space thing)
-  ;;        :world->view (get-world->view-space camera)
-  ;;        :view->clip (projection camera)
-  ;;        :scale (scale thing)
-  ;;        :normal-map (normals thing))
-  )
+         :mult 1.0))
 
 (defmethod update ((thing thing) dt) nil)
 
@@ -59,16 +52,6 @@
       (free iarr)
       (free stream))
     nil))
-
-;;------------------------------------------------------------
-;; Floor
-
-(defclass ground (thing)
-  ((stream :initform (box 40 1 40))
-   (sampler :initform (get-tex "floor.jpg"))))
-
-(defun make-ground ()
-  (push (make-instance 'ground) *things*))
 
 ;;------------------------------------------------------------
 ;; Box
@@ -93,10 +76,6 @@
    (sampler :initform (get-tex "brickwall.jpg"))
    (normals :initform (get-tex "brickwall_normal.jpg"))))
 
-(defclass light-ball (thing)
-  ((stream :initarg :stream)
-   (sampler :initform (get-tex "brickwall.jpg"))
-   (normals :initform (get-tex "brickwall_normal.jpg"))))
 
 (defun make-ball (pos &optional (radius 3))
   (let ((obj (make-instance 'ball :stream (sphere radius))))
@@ -104,58 +83,12 @@
     (push obj *things*)
     obj))
 
-(defvar *disolve-params*
-  (make-blending-params))
-
-(defmethod draw ((camera camera)
-                 (thing ball))
-  (labels ((inner (inside)
-             (with-blending *disolve-params*
-               (map-g #'disolve-pipeline (buf-stream thing)
-                      :model->world
-                      (get-model->world-space thing)
-                      :world->view
-                      (get-world->view-space camera)
-                      :view->clip (projection camera)
-                      :albedo (sampler thing)
-                      :now (now)
-                      :lights *lights*
-                      :normal-map (or (normals thing)
-                                      *fallback-normal-map*)
-                      :scale (scale thing)
-                      :inside inside))))
-    (with-setf (cull-face) :front
-      (inner t))
-    (inner nil)))
-
-(defmethod draw ((camera camera)
-                 (thing light-ball))
-  (map-g #'some-pipeline-with-norms (buf-stream thing)
-         :model->world (get-model->world-space thing)
-         :world->view (get-world->view-space camera)
-         :view->clip (projection camera)
-         :albedo (sampler thing)
-         :now (now)
-         :lights *lights*
-         :normal-map (or (normals thing)
-                         *fallback-normal-map*)
-         :scale (scale thing)
-         :mult 1000.1))
-
 ;;------------------------------------------------------------
 ;; Assimp thing
 
 (defclass assimp-thing (thing)
   ((stream :initarg :stream)
    (sampler :initform (get-tex "rust.jpg"))))
-
-(defun fuck-it (mesh)
-  (push (make-instance 'assimp-thing
-                       :stream (assimp-mesh-to-gpu-arrays mesh))
-        *things*))
-
-(defun load-scene (scene)
-  ())
 
 (defun free-all-assimp-things ()
   (setf *things*
@@ -166,7 +99,7 @@
 
 (defmethod draw ((camera camera)
                  (thing assimp-thing))
-  (map-g #'assimp-pipeline (buf-stream thing)
+  (map-g #'assimp-thing-pipeline (buf-stream thing)
          :model->world (get-model->world-space thing)
          :world->view (get-world->view-space camera)
          :view->clip (projection camera)
@@ -175,13 +108,6 @@
          :now (now)
          :lights *lights*
          :scale (scale thing)
-         :mult 1.0)
-  ;; (map-g #'assimp-norm-pipeline (buf-stream thing)
-  ;;        :model->world (get-model->world-space thing)
-  ;;        :world->view (get-world->view-space camera)
-  ;;        :view->clip (projection camera)
-  ;;        :scale (scale thing)
-  ;;        :normal-map (normals thing))
-  )
+         :mult 1.0))
 
 ;;------------------------------------------------------------
