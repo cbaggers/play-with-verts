@@ -1,8 +1,5 @@
 (in-package #:play-with-verts)
 
-(defstruct-g (los-results :layout std-430)
-  (data (:float 255)))
-
 (defvar *last-time* (get-internal-real-time))
 
 (defvar *scene-fbo* nil)
