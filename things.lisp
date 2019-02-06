@@ -44,15 +44,6 @@
          :scale (scale thing)
          :mult 1.0))
 
-(defmethod los-draw ((camera camera)
-                     (thing thing))
-  (map-g #'los-thing-pipeline (buf-stream thing)
-         :model->world (get-model->world-space thing)
-         :world->view (get-world->view-space camera)
-         :view->clip (projection camera)
-         :scale (scale thing)
-         :id (/ (slot-value thing 'id) 255f0)))
-
 (defmethod update ((thing thing) dt) nil)
 
 (defun free-thing (thing)
@@ -82,13 +73,10 @@
 ;;------------------------------------------------------------
 ;; Ball
 
-(defvar *creature-id* 0)
-
 (defclass ball (thing)
   ((stream :initarg :stream)
    (sampler :initform (get-tex "brickwall.jpg"))
-   (normals :initform (get-tex "brickwall_normal.jpg"))
-   (id :initform (incf *creature-id*))))
+   (normals :initform (get-tex "brickwall_normal.jpg"))))
 
 
 (defun make-ball (pos &optional (radius 3))
@@ -96,6 +84,55 @@
     (setf (pos obj) pos)
     (push obj *things*)
     obj))
+
+;;------------------------------------------------------------
+;; Tile
+
+(defvar *fake-top-sampler* nil)
+(defparameter *cutaway-height* 12f0)
+
+(defclass tile (thing)
+  ((stream :initarg :stream)
+   (sampler :initform (get-tex "brickwall.jpg"))
+   (normals :initform (get-tex "brickwall_normal.jpg"))))
+
+(defun make-tile (pos &optional (radius 6))
+  (let ((obj (make-instance 'tile :stream (sphere radius))))
+    (setf (pos obj) pos)
+    (push obj *things*)
+    obj))
+
+(defmethod draw ((camera camera)
+                 (thing tile))
+  (map-g #'tile-pipeline (buf-stream thing)
+         :model->world (get-model->world-space thing)
+         :world->view (get-world->view-space camera)
+         :view->clip (projection camera)
+         :albedo (sampler thing)
+         :now (now)
+         :lights *lights*
+         :normal-map (or (normals thing)
+                         *fallback-normal-map*)
+         :scale (scale thing)
+         :mult 1.0
+         :cutaway-height *cutaway-height*))
+
+(defmethod draw-fake-top ((camera camera)
+                          (thing tile))
+  (map-g #'tile-fake-top-pipeline (buf-stream thing)
+         :model->world (get-model->world-space thing)
+         :world->view (get-world->view-space camera)
+         :view->clip (projection camera)
+         :albedo (sampler thing)
+         :now (now)
+         :lights *lights*
+         :normal-map (or (normals thing)
+                         *fallback-normal-map*)
+         :scale (scale thing)
+         :mult 1.0
+         :cam-pos-world (pos camera)
+         :cutaway-height *cutaway-height*
+         :fake-top-sampler *fake-top-sampler*))
 
 ;;------------------------------------------------------------
 ;; Assimp thing
