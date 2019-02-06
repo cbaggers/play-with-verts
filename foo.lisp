@@ -30,8 +30,8 @@
          ;;
          (edge1 (v3:- pos2 pos1))
          (edge2 (v3:- pos3 pos1))
-         (delta-uv1 (v3:- uv2 uv1))
-         (delta-uv2 (v3:- uv3 uv1))
+         (delta-uv1 (v2:- uv2 uv1))
+         (delta-uv2 (v2:- uv3 uv1))
          ;;
          (f (/ 1.0 (- (* (x delta-uv1) (y delta-uv2))
                       (* (x delta-uv2) (y delta-uv1)))))
