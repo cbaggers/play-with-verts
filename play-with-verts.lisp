@@ -104,7 +104,8 @@
 
     (as-frame
       (map-g #'htone (get-quad-stream-v2)
-             :sam *htone-sampler*)
+             :sam *htone-sampler*
+             :res (resolution (current-viewport)))
       ;; (draw-tex *htone-sampler*)
       )
 
