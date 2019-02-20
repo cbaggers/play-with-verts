@@ -5,6 +5,9 @@
 (defvar *scene-fbo* nil)
 (defvar *scene-sampler* nil)
 
+(defvar *htone-fbo* nil)
+(defvar *htone-sampler* nil)
+
 (defvar *fallback-normal-map* nil)
 
 (defvar *test-tile* nil)
@@ -25,6 +28,8 @@
     (load-assimp-things "sponza_obj/sponza.obj" 0.2f0)
     (setf *fake-top-sampler* (get-tex "scratched.jpg"))
     (setf *test-tile* (make-tile (v! 0 10 0)))
+    (setf *htone-fbo* (make-fbo 0 :d))
+    (setf *htone-sampler* (sample (attachment-tex *htone-fbo* 0)))
     (make-ball (v! 0 10 20) 3.0)
     (reset-lights))
   ;;
@@ -93,10 +98,16 @@
              (when (typep thing 'tile)
                (draw-fake-top *current-camera* thing)))))
 
+    (with-fbo-bound (*htone-fbo*)
+      (clear-fbo *htone-fbo*)
+      (fxaa3-pass *scene-sampler*))
+
     (as-frame
-      (fxaa3-pass *scene-sampler*)
-      ;;(draw-tex *scene-sampler*)
+      (map-g #'htone (get-quad-stream-v2)
+             :sam *htone-sampler*)
+      ;; (draw-tex *htone-sampler*)
       )
+
     (decay-events)))
 
 (def-simple-main-loop play (:on-start #'reset)

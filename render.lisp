@@ -262,3 +262,22 @@
 (defpipeline-g tile-fake-top-pipeline ()
   (thing-vert-stage g-pnt tb-data)
   (tile-fake-top-frag-stage :vec3 :vec3 :vec2 :mat3))
+
+
+;;------------------------------------------------------------
+
+(defun-g htone-ver ((vert :vec2))
+  (values
+   (v! vert 0 1)
+   (+ (* vert 0.5) 0.5)))
+
+(defun-g htone-frag ((uv :vec2)
+                     &uniform
+                     (sam :sampler-2d))
+  (let* ((col (texture sam uv))
+         (g (nineveh.color:rgb->greyscale (s~ col :xyz))))
+    (v! g g g 0)))
+
+(defpipeline-g htone ()
+  (htone-ver :vec2)
+  (htone-frag :vec2))
