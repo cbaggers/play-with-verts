@@ -39,9 +39,11 @@
          (point-light-strength
           (* (saturate (dot dir-to-light frag-normal))
              (plight-strength light))))
-    (* point-light-strength
-       (attenuate (length vec-to-light))
-       (plight-color light))))
+    (clamp
+     (* point-light-strength
+        (attenuate (length vec-to-light))
+        (plight-color light))
+     0 1)))
 
 (defun-g norm-from-map ((normal-map :sampler-2d) (uv :vec2))
   ;; // obtain normal from normal map in range [0,1]
@@ -92,7 +94,7 @@
             tbn)))
 
 (defun-g thing-vert-stage ((vert g-pnt)
-                          (tb tb-data)
+                           (tb tb-data)
                           &uniform
                           (model->world :mat4)
                           (world->view :mat4)
@@ -127,25 +129,25 @@
          (normal (normalize frag-normal))
          (norm-from-map (norm-from-map normal-map uv))
          ;;
-         (albedo (gamma-correct (s~ (texture albedo uv) :xyz)))
+         (albedo (gamma-correct (s~ (texture albedo uv) :xyz))
+          ;;(v! 0.4 0.4 0.4)
+          )
          ;;
          (ambient (vec3 *ambient*))
          (diffuse-power (vec3 0.0))
          ;;
          (normal (* tbn norm-from-map))
          (now (* 2.5 now)))
-    ;;
-    (if (> mult 1.01)
-        (setf diffuse-power (vec3 1))
-        (with-slots (plights count) lights
-          (dotimes (i count)
-            (incf diffuse-power
-                  (clamp
-                   (calc-light pos
-                               normal
-                               (aref plights i))
-                   0 1)))))
-    ;;
+
+    ;; (if (> mult 1.01)
+    ;;     (setf diffuse-power (vec3 1))
+    ;;     (with-slots (plights count) lights
+    ;;       (dotimes (i count)
+    ;;         (incf diffuse-power
+    ;;               (calc-light pos
+    ;;                           normal
+    ;;                           (aref plights i))))))
+
     (let* ((light-amount (+ ambient diffuse-power))
            (color (* albedo light-amount)))
       (prep-final-color color))))
@@ -168,97 +170,3 @@
 
 
 ;;------------------------------------------------------------
-
-(defun-g tile-frag-stage ((frag-normal :vec3)
-                          (pos :vec3)
-                          (uv :vec2)
-                          (tbn :mat3)
-                          &uniform
-                          (albedo :sampler-2d)
-                          (normal-map :sampler-2d)
-                          (now :float)
-                          (lights light-set :ubo)
-                          (mult :float)
-                          (cutaway-height :float))
-  (let* (;; process inputs
-         (normal (normalize frag-normal))
-         (norm-from-map (norm-from-map normal-map uv))
-         ;;
-         (albedo (gamma-correct (s~ (texture albedo uv) :xyz)))
-         ;;
-         (ambient (vec3 *ambient*))
-         (diffuse-power (vec3 0.0))
-         ;;
-         (normal (* tbn norm-from-map))
-         (now (* 2.5 now)))
-    ;;
-    (cond
-      ((> (y pos) cutaway-height)
-       (discard))
-      ((> mult 1.01)
-       (setf diffuse-power (vec3 1)))
-      (t
-       (with-slots (plights count) lights
-         (dotimes (i count)
-           (incf diffuse-power
-                 (clamp
-                  (calc-light pos
-                              normal
-                              (aref plights i))
-                  0 1))))))
-    ;;
-    (let* ((light-amount (+ ambient diffuse-power))
-           (color (* albedo light-amount)))
-      (prep-final-color color))))
-
-(defpipeline-g tile-pipeline ()
-  (thing-vert-stage g-pnt tb-data)
-  (tile-frag-stage :vec3 :vec3 :vec2 :mat3))
-
-
-(defun-g tile-fake-top-frag-stage
-    ((frag-normal :vec3)
-     (pos :vec3)
-     (uv :vec2)
-     (tbn :mat3)
-     &uniform
-     (albedo :sampler-2d)
-     (normal-map :sampler-2d)
-     (now :float)
-     (lights light-set :ubo)
-     (mult :float)
-     (cam-pos-world :vec3)
-     (cutaway-height :float)
-     (fake-top-sampler :sampler-2d))
-  ;;
-  (if (> (y pos) cutaway-height)
-      (discard)
-      (let* ((y-diff (- (y cam-pos-world) (y pos)))
-             (full-ray (- pos cam-pos-world))
-             (y-to-cutaway (- (y cam-pos-world)
-                              cutaway-height))
-             (scaled-ray (* (/ full-ray y-diff)
-                            y-to-cutaway))
-             (top-pos (+ cam-pos-world scaled-ray))
-             (uv (* 0.1 (s~ top-pos :xz)))
-             ;;
-             (albedo (gamma-correct
-                      (s~ (texture fake-top-sampler uv) :xyz)))
-             (ambient (vec3 *ambient*))
-             (diffuse-power (vec3 0.0))
-             (normal (v! 0 1 0)))
-        (with-slots (plights count) lights
-          (dotimes (i count)
-            (incf diffuse-power
-                  (clamp
-                   (calc-light top-pos
-                               normal
-                               (aref plights i))
-                   0 1))))
-        (let* ((light-amount (+ ambient diffuse-power))
-               (color (* albedo light-amount)))
-          (prep-final-color color)))))
-
-(defpipeline-g tile-fake-top-pipeline ()
-  (thing-vert-stage g-pnt tb-data)
-  (tile-fake-top-frag-stage :vec3 :vec3 :vec2 :mat3))

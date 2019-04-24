@@ -7,8 +7,6 @@
 
 (defvar *fallback-normal-map* nil)
 
-(defvar *test-tile* nil)
-
 (defun reset (&key force)
   ;;
   ;; on first startup
@@ -24,7 +22,6 @@
     ;; Add some things to the scene
     (load-assimp-things "sponza_obj/sponza.obj" 0.2f0)
     (setf *fake-top-sampler* (get-tex "scratched.jpg"))
-    (setf *test-tile* (make-tile (v! 0 10 0)))
     (make-ball (v! 0 10 20) 3.0)
     (reset-lights))
   ;;
@@ -85,10 +82,7 @@
       (clear-fbo *scene-fbo*)
       (loop :for thing :in *things* :do
            (update thing delta)
-           (draw *current-camera* thing)
-           (with-setf (cull-face) :front
-             (when (typep thing 'tile)
-               (draw-fake-top *current-camera* thing)))))
+           (draw *current-camera* thing)))
 
     (as-frame
       (fxaa3-pass *scene-sampler*)
