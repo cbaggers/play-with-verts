@@ -7,6 +7,24 @@
 
 (defvar *fallback-normal-map* nil)
 
+(defvar *gbuffer* nil)
+
+(defclass gbuffer ()
+  ((fbo :initarg :fbo)
+   (pos-sampler :initarg :pos-sampler)
+   (albedo-sampler :initarg :albedo-sampler)
+   (norm-sampler :initarg :norm-sampler)))
+
+(defmethod free ((obj gbuffer))
+  (with-slots (fbo pos-sampler norm-sampler albedo-sampler) obj
+    (free (sampler-texture pos-sampler))
+    (free (sampler-texture norm-sampler))
+    (free (sampler-texture albedo-sampler))
+    (free pos-sampler)
+    (free norm-sampler)
+    (free albedo-sampler)
+    (free fbo)))
+
 (defun reset (&key force)
   ;;
   ;; on first startup
@@ -22,12 +40,60 @@
     ;; Add some things to the scene
     (load-assimp-things "sponza_obj/sponza.obj" 0.2f0)
     (setf *fake-top-sampler* (get-tex "scratched.jpg"))
+
+
+
     (make-ball (v! 0 10 20) 3.0)
     (reset-lights))
   ;;
   ;; every time
+  (reset-gbuffer)
   (reset-fbos)
   (reset-camera))
+
+(defun reset-gbuffer ()
+  (when *gbuffer* (free *gbuffer*))
+  (let* ((dims (viewport-dimensions (current-viewport)))
+         (pos-tex
+          (make-texture
+           nil
+           :dimensions dims
+           :element-type :vec3
+           :mipmap nil :generate-mipmaps nil))
+         (norm-tex
+          (make-texture
+           nil
+           :dimensions dims
+           :element-type :vec3
+           :mipmap nil :generate-mipmaps nil))
+         (albedo-tex
+          (make-texture
+           nil
+           :dimensions dims
+           :element-type :rgba8
+           :mipmap nil :generate-mipmaps nil)))
+    (setf *gbuffer*
+          (make-instance
+           'gbuffer
+           :fbo (make-fbo (list 0 pos-tex)
+                          (list 1 norm-tex)
+                          (list 2 albedo-tex)
+                          (list :d :dimensions dims))
+           :pos-sampler
+           (sample pos-tex
+                   :minify-filter :nearest
+                   :magnify-filter :nearest
+                   :wrap :clamp-to-edge)
+           :norm-sampler
+           (sample norm-tex
+                   :minify-filter :nearest
+                   :magnify-filter :nearest
+                   :wrap :clamp-to-edge)
+           :albedo-sampler
+           (sample albedo-tex
+                   :minify-filter :nearest
+                   :magnify-filter :nearest
+                   :wrap :clamp-to-edge)))))
 
 (defun reset-fbos ()
   (when *scene-fbo*
@@ -77,12 +143,18 @@
     (setf (resolution (current-viewport))
           (surface-resolution (current-surface)))
 
-    ;; draw stuff
+    ;; populate gbuffer
+    (with-slots (fbo) *gbuffer*
+      (with-fbo-bound fbo
+        (clear-fbo fbo)
+        (loop :for thing :in *things* :do
+             (update thing delta)
+             (draw *current-camera* thing))))
+    ;; ssao pass
+
+    ;; final render
     (with-fbo-bound (*scene-fbo*)
-      (clear-fbo *scene-fbo*)
-      (loop :for thing :in *things* :do
-           (update thing delta)
-           (draw *current-camera* thing)))
+      (clear-fbo *scene-fbo*))
 
     (as-frame
       (fxaa3-pass *scene-sampler*)

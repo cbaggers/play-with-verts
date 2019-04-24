@@ -71,12 +71,27 @@
   (let* ((model-pos (v! (* pos scale) 1))
          (world-pos (* model->world model-pos))
          (view-pos (* world->view world-pos))
-         (view-norm (* (m4:to-mat3 model->view) normal))
-         (clip-pos (* view->clip view-pos)))
+         (world-norm (* (m4:to-mat3 model->world) normal))
+         (clip-pos (* view->clip view-pos))
+         ;;
+         (t0 (normalize
+              (s~ (* model->world
+                     (v! tangent 0))
+                  :xyz)))
+         (b0 (normalize
+              (s~ (* model->world
+                     (v! bitangent 0))
+                  :xyz)))
+         (n0 (normalize
+              (s~ (* model->world
+                     (v! normal 0))
+                  :xyz)))
+         (tbn (mat3 t0 b0 n0)))
     (values clip-pos
-            view-pos
-            view-norm
-            (treat-uvs uv))))
+            world-norm
+            (s~ world-pos :xyz)
+            (treat-uvs uv)
+            tbn)))
 
 (defun-g thing-vert-stage ((vert g-pnt)
                            (tb tb-data)
@@ -100,18 +115,16 @@
     (vert-stage-common pos scale normal tangent bitangent uv
                        model->world world->view view->clip)))
 
-(defun-g frag-stage ((view-pos :vec3)
-                     (view-norm :vec3)
+(defun-g frag-stage ((frag-normal :vec3)
+                     (pos :vec3)
                      (uv :vec2)
+                     (tbn :mat3)
                      &uniform
                      (albedo :sampler-2d)
                      (normal-map :sampler-2d)
                      (now :float)
                      (lights light-set :ubo)
                      (mult :float))
-
-  FIIIIX ME
-
   (let* (;; process inputs
          (normal (normalize frag-normal))
          (norm-from-map (norm-from-map normal-map uv))
