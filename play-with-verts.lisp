@@ -80,9 +80,6 @@
     (setf (resolution (current-viewport))
           (surface-resolution (current-surface)))
 
-    (setf (pos *test-tile*)
-          (v! (* 10 (sin (* now 0.001))) 10 0))
-
     ;; draw stuff
     (with-fbo-bound (*scene-fbo*)
       (clear-fbo *scene-fbo*)
