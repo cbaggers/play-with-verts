@@ -49,9 +49,9 @@
     (reset-lights))
   ;;
   ;; every time
-  (when *ssao-noise*
-    (free (sampler-texture *ssao-noise*))
-    (free *ssao-noise*))
+  (when *ssao-noise-sampler*
+    (free (sampler-texture *ssao-noise-sampler*))
+    (free *ssao-noise-sampler*))
   (setf *ssao-noise-sampler* (gen-weird-noise-tex))
   (when *hemi-samples*
     (free *hemi-samples*))
@@ -187,7 +187,7 @@
 
     (as-frame
       ;;(fxaa3-pass *scene-sampler*)
-      ;;(draw-tex (slot-value *gbuffer* 'norm-sampler))
+      (draw-tex (slot-value *gbuffer* 'albedo-sampler))
       (draw-tex *ssao-sampler*))
     (decay-events)))
 
