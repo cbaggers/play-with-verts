@@ -115,7 +115,7 @@
     (vert-stage-common pos scale normal tangent bitangent uv
                        model->world world->view view->clip)))
 
-(defun-g frag-stage ((frag-normal :vec3)
+(defun-g frag-stage ((world-normal :vec3)
                      (pos :vec3)
                      (uv :vec2)
                      (tbn :mat3)
@@ -126,7 +126,7 @@
                      (lights light-set :ubo)
                      (mult :float))
   (let* (;; process inputs
-         (normal (normalize frag-normal))
+         (normal (normalize world-normal))
          (norm-from-map (norm-from-map normal-map uv))
          ;;
          (albedo (gamma-correct (s~ (texture albedo uv) :xyz))
