@@ -39,7 +39,6 @@
     ;;
     ;; Add some things to the scene
     (load-assimp-things "sponza_obj/sponza.obj" 0.2f0)
-    (setf *fake-top-sampler* (get-tex "scratched.jpg"))
 
     (make-ball (v! 0 10 20) 3.0)
     (reset-lights))
@@ -143,7 +142,7 @@
 
     ;; populate gbuffer
     (with-slots (fbo) *gbuffer*
-      (with-fbo-bound fbo
+      (with-fbo-bound (fbo)
         (clear-fbo fbo)
         (loop :for thing :in *things* :do
              (update thing delta)
@@ -155,7 +154,7 @@
       (clear-fbo *scene-fbo*))
 
     (as-frame
-      (fxaa3-pass *scene-sampler*)
+      ;;(fxaa3-pass *scene-sampler*)
       ;;(draw-tex *scene-sampler*)
       )
     (decay-events)))
