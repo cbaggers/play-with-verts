@@ -152,3 +152,62 @@
   (frag-stage :vec3 :mat3 :vec2))
 
 ;;------------------------------------------------------------
+
+(defstruct-g hemi-samples
+  (data (:vec3 64)))
+
+(defun-g ssao-vert ((vert :vec2))
+  (values
+   (v! vert 0 1)
+   (+ (* vert 0.5) 0.5)))
+
+(defun-g ssao-frag ((tex-coords :vec2)
+                    &uniform
+                    (pos-tex :sampler-2d)
+                    (norm-tex :sampler-2d)
+                    (noise-tex :sampler-2d)
+                    (samples hemi-samples :ubo)
+                    (view->clip :mat4)
+                    (screen-res :vec2))
+  ;; tile noise texture over screen based on screen dimensions
+  ;; divided by noise size
+  (let* ((noise-scale (/ screen-res 4))
+         ;;
+         (view-pos (s~ (texture pos-tex tex-coords) :xyz))
+         (normal (s~ (texture norm-tex tex-coords) :xyz))
+         (rand-vec (s~ (texture noise-tex
+                                (* tex-coords noise-scale))
+                       :xyz))
+         ;;
+         (tangent (normalize
+                   (- rand-vec (* normal (dot rand-vec normal)))))
+         (bitangent (cross normal tangent))
+         (tbn (m3:from-columns tangent bitangent normal))
+         ;;
+         (kernel-size 64)
+         (radius 0.5)
+         (bias 0.025)
+         (occlusion 0f0))
+    (for (i 0) (< i kernel-size) (incf i)
+         (let* ((arr (hemi-samples-data samples))
+                (sample (+ view-pos
+                           (* (* tbn (aref arr i)) radius)))
+                (offset (* view->clip (v! sample 1.0)))
+                (offset (/ offset (w offset)))
+                (screen-space-pos
+                 (+ (* 0.5 (s~ offset :xyz)) 0.5))
+                (sample-depth
+                 (z (texture pos-tex (s~ screen-space-pos :xy))))
+                (rdiff (/ radius (abs (- (z view-pos)
+                                         sample-depth))))
+                (range-check (smoothstep 0 1 rdiff)))
+           (incf occlusion
+                 (* (if (>= sample-depth (+ (z sample) bias))
+                        1f0
+                        0f0)
+                    range-check))))
+    (vec4 (- 1f0 (/ occlusion kernel-size)))))
+
+(defpipeline-g ssao-pipeline ()
+  (ssao-vert :vec2)
+  (ssao-frag :vec2))

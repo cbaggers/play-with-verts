@@ -9,6 +9,11 @@
 
 (defvar *gbuffer* nil)
 
+(defvar *ssao-fbo* nil)
+(defvar *ssao-sampler* nil)
+(defvar *hemi-samples* nil)
+(defvar *ssao-noise-sampler* nil)
+
 (defclass gbuffer ()
   ((fbo :initarg :fbo)
    (pos-sampler :initarg :pos-sampler)
@@ -44,6 +49,13 @@
     (reset-lights))
   ;;
   ;; every time
+  (when *ssao-noise*
+    (free (sampler-texture *ssao-noise*))
+    (free *ssao-noise*))
+  (setf *ssao-noise-sampler* (gen-weird-noise-tex))
+  (when *hemi-samples*
+    (free *hemi-samples*))
+  (setf *hemi-samples* (gen-kernel-points-ubo))
   (reset-gbuffer)
   (reset-fbos)
   (reset-camera))
@@ -100,7 +112,15 @@
                   (list 1 :element-type :rgba16f)
                   :d))
   (setf *scene-sampler*
-        (sample (attachment-tex *scene-fbo* 0))))
+        (sample (attachment-tex *scene-fbo* 0)))
+
+  (when *ssao-sampler*
+    (free *ssao-sampler*))
+  (when *ssao-fbo*
+    (free *ssao-fbo*))
+  (setf *ssao-fbo* (make-fbo '(0 :element-type :float)))
+  (setf *ssao-sampler*
+        (sample (attachment-tex *ssao-fbo* 0))))
 
 (defun reset-lights ()
   (when *lights*
@@ -137,17 +157,29 @@
     (update *current-camera* delta)
 
     ;; set the position of our viewport
-    (setf (resolution (current-viewport))
-          (surface-resolution (current-surface)))
+    (let ((res (surface-resolution (current-surface))))
 
-    ;; populate gbuffer
-    (with-slots (fbo) *gbuffer*
-      (with-fbo-bound (fbo)
-        (clear-fbo fbo)
-        (loop :for thing :in *things* :do
-             (update thing delta)
-             (draw *current-camera* thing))))
-    ;; ssao pass
+      (setf (resolution (current-viewport)) res)
+
+      ;; populate gbuffer
+      (with-slots (fbo) *gbuffer*
+        (with-fbo-bound (fbo)
+          (clear-fbo fbo)
+          (loop :for thing :in *things* :do
+               (update thing delta)
+               (draw *current-camera* thing))))
+      ;; ssao pass
+      (with-fbo-bound (*ssao-fbo*)
+
+        (with-slots (fbo pos-sampler albedo-sampler norm-sampler)
+            *gbuffer*
+          (map-g #'ssao-pipeline (get-quad-stream-v2)
+                 :pos-tex pos-sampler
+                 :norm-tex norm-sampler
+                 :noise-tex *ssao-noise-sampler*
+                 :samples *hemi-samples*
+                 :view->clip (projection *current-camera*)
+                 :screen-res res))))
 
     ;; final render
     ;; (with-fbo-bound (*scene-fbo*)
@@ -155,7 +187,8 @@
 
     (as-frame
       ;;(fxaa3-pass *scene-sampler*)
-      (draw-tex (slot-value *gbuffer* 'norm-sampler)))
+      ;;(draw-tex (slot-value *gbuffer* 'norm-sampler))
+      (draw-tex *ssao-sampler*))
     (decay-events)))
 
 (def-simple-main-loop play (:on-start #'reset)
@@ -166,19 +199,25 @@
 ;; (skitter.sdl2:enable-background-joystick-events)
 
 
-(defun gen-kernel-points (num-of-points)
-  (let* ((res (make-c-array nil :dimensions num-of-points
-                            :element-type :vec3)))
-    (loop
-       :for i :below num-of-points
-       :for x := (- (random 2f0) 1f0)
-       :for y := (- (random 2f0) 1f0)
-       :for z := (random 1f0)
-       :for s0 := (/ i (float num-of-points 0f0))
-       :for s1 := (lerp 0.1f0 1f0 (* s0 s0))
-       :for v := (v3:*s (v3:normalize (v! x y z))
-                        (* (random 1f0) s1))
-       :do (setf (aref-c res i) v))
+(defun pop-kernel-points (carr num-of-points)
+  (loop
+     :for i :below num-of-points
+     :for x := (- (random 2f0) 1f0)
+     :for y := (- (random 2f0) 1f0)
+     :for z := (random 1f0)
+     :for s0 := (/ i (float num-of-points 0f0))
+     :for s1 := (lerp 0.1f0 1f0 (* s0 s0))
+     :for v := (v3:*s (v3:normalize (v! x y z))
+                      (* (random 1f0) s1))
+     :do (setf (aref-c carr i) v))
+  carr)
+
+(defun gen-kernel-points-ubo (&optional (num-of-points 64))
+  (let ((res (make-ubo nil 'hemi-samples)))
+    (with-gpu-array-as-c-array (ubo-arr (ubo-data res))
+      (pop-kernel-points
+       (hemi-samples-data (aref-c ubo-arr 0))
+       num-of-points))
     res))
 
 (defun gen-weird-noise ()
