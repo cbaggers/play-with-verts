@@ -18,7 +18,7 @@
                :classimp)
   :components ((:file "package")
                (:file "utils")
-               (:file "foo")
+               (:file "add-tangents")
                (:file "assets")
                (:file "camera")
                (:file "render")

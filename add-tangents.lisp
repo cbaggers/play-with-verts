@@ -4,7 +4,7 @@
   (tangent :vec3)
   (bitangent :vec3))
 
-(defun test (g-verts g-indices)
+(defun add-tangents (g-verts g-indices)
   (let* ((verts (pull1-g g-verts))
          (indices (pull-g g-indices))
          (result (make-gpu-array

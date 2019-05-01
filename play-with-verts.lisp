@@ -41,8 +41,6 @@
     (load-assimp-things "sponza_obj/sponza.obj" 0.2f0)
     (setf *fake-top-sampler* (get-tex "scratched.jpg"))
 
-
-
     (make-ball (v! 0 10 20) 3.0)
     (reset-lights))
   ;;
