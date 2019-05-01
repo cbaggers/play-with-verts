@@ -71,6 +71,10 @@
   (let* ((model-pos (v! (* pos scale) 1))
          (world-pos (* model->world model-pos))
          (view-pos (* world->view world-pos))
+
+         (world-norm (* (m4:to-mat3 model->world) normal))
+         (view-norm (* (m4:to-mat3 world->view) world-norm))
+
          (clip-pos (* view->clip view-pos))
          ;;
          (t0 (normalize
@@ -92,7 +96,8 @@
     (values clip-pos
             (s~ view-pos :xyz)
             tbn
-            (treat-uvs uv))))
+            (treat-uvs uv)
+            view-norm)))
 
 (defun-g thing-vert-stage ((vert g-pnt)
                            (tb tb-data)
@@ -119,6 +124,7 @@
 (defun-g frag-stage ((view-pos :vec3)
                      (tbn :mat3)
                      (uv :vec2)
+                     (view-norm :vec3)
                      &uniform
                      (albedo :sampler-2d)
                      (normal-map :sampler-2d)
@@ -145,11 +151,11 @@
 
 (defpipeline-g thing-pipeline ()
   (thing-vert-stage g-pnt tb-data)
-  (frag-stage :vec3 :mat3 :vec2))
+  (frag-stage :vec3 :mat3 :vec2 :vec3))
 
 (defpipeline-g assimp-thing-pipeline ()
   (assimp-vert-stage assimp-mesh)
-  (frag-stage :vec3 :mat3 :vec2))
+  (frag-stage :vec3 :mat3 :vec2 :vec3))
 
 ;;------------------------------------------------------------
 
@@ -206,7 +212,7 @@
                         1f0
                         0f0)
                     range-check))))
-    (vec4 (- 1f0 (/ occlusion kernel-size)))))
+    (vec4 (expt (- 1f0 (/ occlusion kernel-size)) 1))))
 
 (defpipeline-g ssao-pipeline ()
   (ssao-vert :vec2)
