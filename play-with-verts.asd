@@ -18,6 +18,7 @@
                :classimp)
   :components ((:file "package")
                (:file "utils")
+               (:file "globalists")
                (:file "add-tangents")
                (:file "assets")
                (:file "camera")

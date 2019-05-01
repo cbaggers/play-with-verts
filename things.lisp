@@ -24,8 +24,6 @@
    (scale
     :initarg :scale :initform 1f0 :accessor scale)))
 
-(defvar *things* nil)
-
 (defmethod get-model->world-space ((thing thing))
   (m4:* (m4:translation (pos thing))
         (q:to-mat4 (rot thing))))
