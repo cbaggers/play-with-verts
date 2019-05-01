@@ -150,12 +150,12 @@
     ;; ssao pass
 
     ;; final render
-    (with-fbo-bound (*scene-fbo*)
-      (clear-fbo *scene-fbo*))
+    ;; (with-fbo-bound (*scene-fbo*)
+    ;;   (clear-fbo *scene-fbo*))
 
     (as-frame
       ;;(fxaa3-pass *scene-sampler*)
-      ;;(draw-tex *scene-sampler*)
+      (draw-tex (slot-value *gbuffer* 'norm-sampler))
       )
     (decay-events)))
 

@@ -71,11 +71,27 @@
   (let* ((model-pos (v! (* pos scale) 1))
          (world-pos (* model->world model-pos))
          (view-pos (* world->view world-pos))
-         (view-norm (* (m4:to-mat3 model->view) normal))
-         (clip-pos (* view->clip view-pos)))
+         (clip-pos (* view->clip view-pos))
+         ;;
+         (t0 (normalize
+              (s~ (* world->view
+                     (* model->world
+                        (v! tangent 0)))
+                  :xyz)))
+         (b0 (normalize
+              (s~ (* world->view
+                     (* model->world
+                        (v! bitangent 0)))
+                  :xyz)))
+         (n0 (normalize
+              (s~ (* world->view
+                     (* model->world
+                        (v! normal 0)))
+                  :xyz)))
+         (tbn (mat3 t0 b0 n0)))
     (values clip-pos
-            view-pos
-            view-norm
+            (s~ view-pos :xyz)
+            tbn
             (treat-uvs uv))))
 
 (defun-g thing-vert-stage ((vert g-pnt)
@@ -101,7 +117,7 @@
                        model->world world->view view->clip)))
 
 (defun-g frag-stage ((view-pos :vec3)
-                     (view-norm :vec3)
+                     (tbn :mat3)
                      (uv :vec2)
                      &uniform
                      (albedo :sampler-2d)
@@ -109,35 +125,15 @@
                      (now :float)
                      (lights light-set :ubo)
                      (mult :float))
-
-  FIIIIX ME
-
-  (let* (;; process inputs
-         (normal (normalize frag-normal))
+  (let* (;;
+         (albedo (gamma-correct (s~ (texture albedo uv) :xyz)))
+         ;;
          (norm-from-map (norm-from-map normal-map uv))
-         ;;
-         (albedo (gamma-correct (s~ (texture albedo uv) :xyz))
-          ;;(v! 0.4 0.4 0.4)
-          )
-         ;;
-         (ambient (vec3 *ambient*))
-         (diffuse-power (vec3 0.0))
-         ;;
-         (normal (* tbn norm-from-map))
-         (now (* 2.5 now)))
-
-    ;; (if (> mult 1.01)
-    ;;     (setf diffuse-power (vec3 1))
-    ;;     (with-slots (plights count) lights
-    ;;       (dotimes (i count)
-    ;;         (incf diffuse-power
-    ;;               (calc-light pos
-    ;;                           normal
-    ;;                           (aref plights i))))))
-
-    (let* ((light-amount (+ ambient diffuse-power))
-           (color (* albedo light-amount)))
-      (prep-final-color color))))
+         (view-norm (* tbn norm-from-map)))
+    (values
+     view-pos
+     view-norm
+     albedo)))
 
 (defun-g prep-final-color ((color :vec3))
   (let* ((final-color (tone-map-uncharted2
@@ -149,11 +145,10 @@
 
 (defpipeline-g thing-pipeline ()
   (thing-vert-stage g-pnt tb-data)
-  (frag-stage :vec3 :vec3 :vec2 :mat3))
+  (frag-stage :vec3 :mat3 :vec2))
 
 (defpipeline-g assimp-thing-pipeline ()
   (assimp-vert-stage assimp-mesh)
-  (frag-stage :vec3 :vec3 :vec2 :mat3))
-
+  (frag-stage :vec3 :mat3 :vec2))
 
 ;;------------------------------------------------------------
