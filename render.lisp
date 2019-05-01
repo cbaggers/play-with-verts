@@ -129,7 +129,7 @@
          (albedo (gamma-correct (s~ (texture albedo uv) :xyz)))
          ;;
          (norm-from-map (norm-from-map normal-map uv))
-         (view-norm (* tbn norm-from-map)))
+         (view-norm (normalize (* tbn norm-from-map))))
     (values
      view-pos
      view-norm

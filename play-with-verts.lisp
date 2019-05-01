@@ -155,8 +155,7 @@
 
     (as-frame
       ;;(fxaa3-pass *scene-sampler*)
-      (draw-tex (slot-value *gbuffer* 'norm-sampler))
-      )
+      (draw-tex (slot-value *gbuffer* 'norm-sampler)))
     (decay-events)))
 
 (def-simple-main-loop play (:on-start #'reset)
@@ -165,3 +164,38 @@
 ;; (sdl2-game-controller-db:load-db)
 ;; (defvar *pad* (sdl2:game-controller-open 0))
 ;; (skitter.sdl2:enable-background-joystick-events)
+
+
+(defun gen-kernel-points (num-of-points)
+  (let* ((res (make-c-array nil :dimensions num-of-points
+                            :element-type :vec3)))
+    (loop
+       :for i :below num-of-points
+       :for x := (- (random 2f0) 1f0)
+       :for y := (- (random 2f0) 1f0)
+       :for z := (random 1f0)
+       :for s0 := (/ i (float num-of-points 0f0))
+       :for s1 := (lerp 0.1f0 1f0 (* s0 s0))
+       :for v := (v3:*s (v3:normalize (v! x y z))
+                        (* (random 1f0) s1))
+       :do (setf (aref-c res i) v))
+    res))
+
+(defun gen-weird-noise ()
+  (let ((res (make-c-array nil :dimensions '(4 4)
+                           :element-type :vec3)))
+    (loop
+       :for i :below 16
+       :do (setf (row-major-aref-c res i)
+                 (v! (- (random 2f0) 1f0)
+                     (- (random 2f0) 1f0)
+                     0f0)))
+    res))
+
+(defun gen-weird-noise-tex ()
+  (with-c-array-freed (carr (gen-weird-noise))
+    (let ((tex (make-texture carr :element-type :vec3)))
+      (sample tex
+              :minify-filter :nearest
+              :magnify-filter :nearest
+              :wrap :repeat))))
