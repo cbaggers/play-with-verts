@@ -14,6 +14,9 @@
 (defvar *hemi-samples* nil)
 (defvar *ssao-noise-sampler* nil)
 
+(defvar *blur-fbo* nil)
+(defvar *blur-sampler* nil)
+
 (defclass gbuffer ()
   ((fbo :initarg :fbo)
    (pos-sampler :initarg :pos-sampler)
@@ -120,7 +123,18 @@
     (free *ssao-fbo*))
   (setf *ssao-fbo* (make-fbo '(0 :element-type :float)))
   (setf *ssao-sampler*
-        (sample (attachment-tex *ssao-fbo* 0))))
+        (sample (attachment-tex *ssao-fbo* 0)))
+
+  (when *blur-fbo*
+    (free (attachment-tex *blur-fbo* 0))
+    (free *blur-sampler*)
+    (free *blur-fbo*))
+  (setf *blur-fbo*
+        (make-fbo '(0 :element-type :float)))
+  (setf *blur-sampler*
+        (sample (attachment-tex *blur-fbo* 0)
+                :minify-filter :nearest
+                :magnify-filter :nearest)))
 
 (defun reset-lights ()
   (when *lights*
@@ -157,38 +171,56 @@
     (update *current-camera* delta)
 
     ;; set the position of our viewport
-    (let ((res (surface-resolution (current-surface))))
+    (let ((res (surface-resolution (current-surface)))
+          (quad-stream (get-quad-stream-v2)))
 
       (setf (resolution (current-viewport)) res)
 
       ;; populate gbuffer
       (with-slots (fbo) *gbuffer*
         (with-fbo-bound (fbo)
-          (clear-fbo fbo)
+          (clear)
           (loop :for thing :in *things* :do
                (update thing delta)
                (draw *current-camera* thing))))
+
       ;; ssao pass
       (with-fbo-bound (*ssao-fbo*)
-
-        (with-slots (fbo pos-sampler albedo-sampler norm-sampler)
-            *gbuffer*
-          (map-g #'ssao-pipeline (get-quad-stream-v2)
+        (clear)
+        (with-slots (pos-sampler norm-sampler) *gbuffer*
+          (map-g #'ssao-pipeline quad-stream
                  :pos-tex pos-sampler
                  :norm-tex norm-sampler
                  :noise-tex *ssao-noise-sampler*
                  :samples *hemi-samples*
                  :view->clip (projection *current-camera*)
-                 :screen-res res))))
+                 :screen-res res)))
+      (with-fbo-bound (*blur-fbo*)
+        (map-g #'blur-pipeline quad-stream
+               :ssao-input *ssao-sampler*))
 
-    ;; final render
-    ;; (with-fbo-bound (*scene-fbo*)
-    ;;   (clear-fbo *scene-fbo*))
+      ;; final render
+      ;; (with-fbo-bound (*scene-fbo*)
+      ;;   (clear-fbo *scene-fbo*))
 
-    (as-frame
-      ;;(fxaa3-pass *scene-sampler*)
-      (draw-tex (slot-value *gbuffer* 'albedo-sampler))
-      (draw-tex *ssao-sampler*))
+      (as-frame
+        ;;(fxaa3-pass *scene-sampler*)
+        ;;(draw-tex (slot-value *gbuffer* 'pos-sampler))
+        ;;(draw-tex *ssao-noise-sampler*)
+        (with-slots (fbo pos-sampler albedo-sampler norm-sampler)
+            *gbuffer*
+          (with-blending nil
+            (map-g #'compose-pipeline quad-stream
+                   :pos-sam pos-sampler
+                   :albedo-sam albedo-sampler
+                   :norm-sam norm-sampler
+                   :ssao-sam *blur-sampler*
+                   :now now
+                   :lights *lights*)))
+        (with-setf (depth-test-function) nil
+          (with-slots (fbo) *gbuffer*
+            (loop :for thing :in *things* :do
+                 (draw-norms *current-camera* thing))))))
     (decay-events)))
 
 (def-simple-main-loop play (:on-start #'reset)

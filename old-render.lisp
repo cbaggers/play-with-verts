@@ -126,7 +126,6 @@
                      (lights light-set :ubo)
                      (mult :float))
   (let* (;; process inputs
-         (normal (normalize world-normal))
          (norm-from-map (norm-from-map normal-map uv))
          ;;
          (albedo (gamma-correct (s~ (texture albedo uv) :xyz))

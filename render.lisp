@@ -87,17 +87,12 @@
                      (* model->world
                         (v! bitangent 0)))
                   :xyz)))
-         (n0 (normalize
-              (s~ (* world->view
-                     (* model->world
-                        (v! normal 0)))
-                  :xyz)))
+         (n0 (normalize (s~ view-norm :xyz)))
          (tbn (mat3 t0 b0 n0)))
     (values clip-pos
             (s~ view-pos :xyz)
             tbn
-            (treat-uvs uv)
-            view-norm)))
+            (treat-uvs uv))))
 
 (defun-g thing-vert-stage ((vert g-pnt)
                            (tb tb-data)
@@ -124,7 +119,6 @@
 (defun-g frag-stage ((view-pos :vec3)
                      (tbn :mat3)
                      (uv :vec2)
-                     (view-norm :vec3)
                      &uniform
                      (albedo :sampler-2d)
                      (normal-map :sampler-2d)
@@ -151,18 +145,18 @@
 
 (defpipeline-g thing-pipeline ()
   (thing-vert-stage g-pnt tb-data)
-  (frag-stage :vec3 :mat3 :vec2 :vec3))
+  (frag-stage :vec3 :mat3 :vec2))
 
 (defpipeline-g assimp-thing-pipeline ()
   (assimp-vert-stage assimp-mesh)
-  (frag-stage :vec3 :mat3 :vec2 :vec3))
+  (frag-stage :vec3 :mat3 :vec2))
 
 ;;------------------------------------------------------------
 
 (defstruct-g hemi-samples
   (data (:vec3 64)))
 
-(defun-g ssao-vert ((vert :vec2))
+(defun-g quad-vert ((vert :vec2))
   (values
    (v! vert 0 1)
    (+ (* vert 0.5) 0.5)))
@@ -215,5 +209,112 @@
     (vec4 (expt (- 1f0 (/ occlusion kernel-size)) 1))))
 
 (defpipeline-g ssao-pipeline ()
-  (ssao-vert :vec2)
+  (quad-vert :vec2)
   (ssao-frag :vec2))
+
+(defun-g blur-frag ((tex-coords :vec2)
+                    &uniform
+                    (ssao-input :sampler-2d))
+  (let* ((tex-size (texture-size ssao-input 0))
+         (texel-size (/ 1f0 (vec2 (x tex-size) (y tex-size))))
+         (result 0f0))
+    (for (x -2) (< x 2) (++ x)
+         (for (y -2) (< y 2) (++ y)
+              (let* ((offset (* (v! x y) texel-size))
+                     (tc (+ tex-coords offset)))
+                (incf result (x (texture ssao-input tc))))))
+    (vec4 (/ result (* 4f0 4f0)) )))
+
+(defpipeline-g blur-pipeline ()
+  (quad-vert :vec2)
+  (blur-frag :vec2))
+
+;;------------------------------------------------------------
+
+(defun-g compose-frag ((tex-coords :vec2)
+                       &uniform
+                       (pos-sam :sampler-2d)
+                       (albedo-sam :sampler-2d)
+                       (norm-sam :sampler-2d)
+                       (ssao-sam :sampler-2d)
+                       (now :float)
+                       (lights light-set :ubo)
+                       (world->view :mat4))
+  (let* (;; process inputs
+         (pos (s~ (texture pos-sam tex-coords)
+                  :xyz))
+         (normal (s~ (normalize (texture norm-sam tex-coords))
+                     :xyz))
+         (albedo (s~ (texture albedo-sam tex-coords) :xyz))
+         (occlusion (expt (s~ (texture ssao-sam tex-coords) :x)
+                          4))
+         ;;
+         (ambient (vec3 (* *ambient* occlusion)))
+         (diffuse-power (vec3 0.0)))
+
+    (with-slots (plights count) lights
+      (dotimes (i count)
+        (let* ((light (aref plights i))
+               (lpos (plight-pos light))
+               (tlpos (s~ (* world->view (v! lpos 1)) :xyz))
+               (fixed (make-plight
+                       tlpos
+                       (plight-color light)
+                       (plight-strength light))))
+          (incf diffuse-power
+                (calc-light pos normal fixed)))))
+
+    (let* ((light-amount (+ ambient diffuse-power))
+           (color (* light-amount albedo)))
+      (prep-final-color color))))
+
+(defpipeline-g compose-pipeline ()
+  (quad-vert :vec2)
+  (compose-frag :vec2))
+
+
+(defun-g normals-vert ((vert assimp-mesh)
+                       &uniform
+                       (model->world :mat4)
+                       (world->view :mat4)
+                       (view->clip :mat4)
+                       (scale :float)
+                       (normal-map :sampler-2d))
+  (with-slots (pos normal uv tangent bitangent) vert
+    (multiple-value-bind (clip-pos
+                          view-pos
+                          tbn
+                          uvs)
+        (vert-stage-common pos scale normal tangent bitangent uv
+                           model->world world->view view->clip)
+      (let* ((norm-from-map (norm-from-map normal-map uv))
+             (view-norm (normalize (* tbn norm-from-map))))
+        (values
+         clip-pos
+         (s~ view-norm :xyz))))))
+
+(defun-g normals-geom ((normals (:vec3 3)))
+  (declare (output-primitive :kind :line-strip :max-vertices 6))
+  (labels ((gen-line ((index :int))
+             (let* ((magnitude 3f0)
+                    (p0 (gl-position (aref gl-in index)))
+                    (p1 (+ p0 (* (v! (aref normals index) 0) magnitude))))
+               (setf gl-position p0)
+               (emit-vertex)
+               (setf gl-position p1)
+               (emit-vertex)
+               (end-primitive)
+               (values))))
+    (gen-line 0)
+    (gen-line 1)
+    (gen-line 2)
+    (values)))
+
+(defun-g normals-frag ()
+  (v! 1 1 0 1))
+
+
+(defpipeline-g draw-normals ()
+  :vertex (normals-vert assimp-mesh)
+  :geometry (normals-geom (:vec3 3))
+  :fragment (normals-frag))

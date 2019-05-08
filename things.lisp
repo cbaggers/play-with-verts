@@ -110,6 +110,19 @@
          :scale (scale thing)
          :mult 1.0))
 
+(defgeneric draw-norms (camera thing)
+  (:method ((camera camera)
+            (thing assimp-thing))
+    (map-g #'draw-normals (buf-stream thing)
+           :model->world (get-model->world-space thing)
+           :world->view (get-world->view-space camera)
+           :view->clip (projection camera)
+           :normal-map (normals thing)
+           :scale (scale thing)))
+  (:method (camera thing)
+    nil))
+
+
 (defmethod los-draw ((camera camera)
                      (thing assimp-thing))
   (map-g #'los-assimp-pipeline (buf-stream thing)
