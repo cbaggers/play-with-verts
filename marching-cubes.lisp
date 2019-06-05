@@ -286,11 +286,11 @@
   (assert (not (eq (> v1 0) (> v0 0))))
   (/ (- 0 v0) (- v1 v0)))
 
-(defun march-cell (density-function position verts normals)
+(defun march-cell (density-function position verts normals scale)
   (let* ((f-eval (make-array 8)))
     (loop
        :for v :below 8
-       :for vpos = (aref *vertices* v)
+       :for vpos = (v3:*s (aref *vertices* v) scale)
        :do (setf (aref f-eval v)
                  (funcall density-function
                           (v3:+ position vpos))))
@@ -301,8 +301,8 @@
                       (f0 (aref f-eval v0))
                       (f1 (aref f-eval v1))
                       (t0 (- 1f0 (adapt f0 f1)))
-                      (vpos0 (aref *vertices* v0))
-                      (vpos1 (aref *vertices* v1))
+                      (vpos0 (v3:*s (aref *vertices* v0) scale))
+                      (vpos1 (v3:*s (aref *vertices* v1) scale))
                       (vert (v3:+ position
                                   (v3:lerp vpos1 vpos0 t0))))
                  (vector-push-extend
@@ -325,27 +325,31 @@
         (values)))))
 
 (defun march (density-function)
-  (let ((verts (make-array
-                0
-                :element-type 'vec3
-                :adjustable t
-                :fill-pointer 0))
-        (normals (make-array
-                  0
-                  :element-type 'vec3
-                  :adjustable t
-                  :fill-pointer 0)))
-    (loop :for x :from -10f0 :to 10f0 :do
-         (loop :for y :from -10f0 :to 10f0 :do
-              (loop :for z :from -10f0 :to 10f0 :do
+  (let* ((verts (make-array
+                 0
+                 :element-type 'vec3
+                 :adjustable t
+                 :fill-pointer 0))
+         (normals (make-array
+                   0
+                   :element-type 'vec3
+                   :adjustable t
+                   :fill-pointer 0))
+         (step 0.5f0))
+    (loop :for x :from -10f0 :to 10f0 :by step :do
+         (loop :for y :from -10f0 :to 10f0 :by step :do
+              (loop :for z :from -10f0 :to 10f0 :by step :do
                    (march-cell density-function
                                (v! x y z)
                                verts
-                               normals))))
+                               normals
+                               step))))
     (values verts normals)))
 
 (defun circle (radius v3point)
-  (- (+ radius (sin (* 2 (x v3point))))
+  (- (min radius
+          (min (sin (* 2 (x v3point)))
+               (* 0.5 (cos (* 3 (y v3point))))))
      (v3:length v3point)))
 
 (defun do-it ()
