@@ -1,8 +1,21 @@
 (in-package #:play-with-verts)
 
 (defvar *last-time* (get-internal-real-time))
+(defvar *mesh* nil)
+(defvar *bstream* nil)
+(defvar *sampler* nil)
 
-(defun reset (&key force)
+(defun reset ()
+  (when *mesh*
+    (free *mesh*))
+  (setf *mesh* (do-it))
+  (setf *bstream* (make-buffer-stream *mesh*))
+  (setf
+   *sampler*
+   (sample
+    (dirt:load-image-to-texture
+     (asdf:system-relative-pathname
+      :play-with-verts "./media/rust.jpg"))))
   (reset-camera))
 
 (defun game-step ()
@@ -11,13 +24,17 @@
          (delta (if (> delta 0.16) 0.00001 delta)))
     (setf *last-time* now)
 
+    (setf (viewport-resolution (current-viewport))
+          (surface-resolution (current-surface)))
+
     ;; update camera
     (update *current-camera* delta)
 
-    (with-setf (clear-color) (v! 1 0 1 0)
-      (as-frame
-       ;; todo
-       ))
+    (as-frame
+      (when *bstream*
+        (render *current-camera*
+                *bstream*
+                *sampler*)))
     (decay-events)))
 
 (def-simple-main-loop play (:on-start #'reset)

@@ -57,8 +57,8 @@
 (defun reset-camera (&optional (cam *current-camera*))
   ;; (setf (pos cam) (v! -180.059 181.38274 -16.8606)
   ;;       (rot cam) (q! 0.633 -0.129 -0.746 -0.160))
-  (setf (pos *current-camera*) (v! -238 42 -30.0)
-        (rot *current-camera*) (v! -1 0.2 0 0))
+  (setf (pos *current-camera*) (v! 0.0 0.0 32.70001)
+        (rot *current-camera*) (q:identity))
   cam)
 
 (defmethod projection ((camera perspective-camera))
