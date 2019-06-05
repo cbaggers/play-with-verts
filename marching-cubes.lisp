@@ -295,19 +295,20 @@
                  (funcall density-function
                           (v3:+ position vpos))))
     (labels ((edge-to-boundary-vertex (edge-index)
-             (let* ((vi (aref *edges* edge-index))
-                    (v0 (aref vi 0))
-                    (v1 (aref vi 1))
-                    (f0 (aref f-eval v0))
-                    (f1 (aref f-eval v1))
-                    (t0 (- 1f0 (adapt f0 f1)))
-                    (vpos0 (aref *vertices* v0))
-                    (vpos1 (aref *vertices* v1))
-                    (vert (v3:+ position
-                                (v3:lerp vpos1 vpos0 t0))))
-               (vector-push-extend
-                (gen-normals density-function vpos0) normals)
-               (vector-push-extend vert verts))))
+               (let* ((vi (aref *edges* edge-index))
+                      (v0 (aref vi 0))
+                      (v1 (aref vi 1))
+                      (f0 (aref f-eval v0))
+                      (f1 (aref f-eval v1))
+                      (t0 (- 1f0 (adapt f0 f1)))
+                      (vpos0 (aref *vertices* v0))
+                      (vpos1 (aref *vertices* v1))
+                      (vert (v3:+ position
+                                  (v3:lerp vpos1 vpos0 t0))))
+                 (vector-push-extend
+                  (gen-normals density-function vert)
+                  normals)
+                 (vector-push-extend vert verts))))
       (let* ((mcase
               (loop
                  :for d :across f-eval
@@ -344,7 +345,8 @@
     (values verts normals)))
 
 (defun circle (radius v3point)
-  (- (+ radius (sin (y v3point))) (v3:length v3point)))
+  (- (+ radius (sin (* 2 (x v3point))))
+     (v3:length v3point)))
 
 (defun do-it ()
   (multiple-value-bind (verts norms)
@@ -364,7 +366,7 @@
       res)))
 
 (defun gen-normals (func pos)
-  (let ((offset 1f0))
+  (let ((offset 0.01f0))
     (v3:normalize
      (v! (- (funcall func (v3:+ pos (v!     offset  0f0 0f0)))
             (funcall func (v3:+ pos (v! (- offset)  0f0 0f0))))
