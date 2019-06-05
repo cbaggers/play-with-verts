@@ -6,8 +6,8 @@
 (defvar *sampler* nil)
 
 (defun reset ()
-  (when *mesh*
-    (free *mesh*))
+  (when *mesh* (free *mesh*))
+  (when *bstream* (free *bstream*))
   (setf *mesh* (do-it))
   (setf *bstream* (make-buffer-stream *mesh*))
   (setf
