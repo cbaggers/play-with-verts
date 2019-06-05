@@ -7,21 +7,18 @@
   :serial t
   :depends-on (#:cepl.sdl2
                #:nineveh
-               :dirt
-               :cepl.skitter.sdl2
-               :temporal-functions
-               :rtg-math
-               :rtg-math.vari
-               :sdl2-game-controller-db
-               :with-setf
-               :classimp-fallback-libs
-               :classimp)
+               #:dirt
+               #:cepl.skitter.sdl2
+               #:temporal-functions
+               #:rtg-math
+               #:rtg-math.vari
+               #:sdl2-game-controller-db
+               #:with-setf
+               #:classimp-fallback-libs
+               #:classimp)
   :components ((:file "package")
                (:file "utils")
                (:file "globalists")
-               (:file "add-tangents")
-               (:file "assets")
                (:file "camera")
                (:file "render")
-               (:file "things")
-               (:file "play-with-verts")))
+               (:file "base")))
