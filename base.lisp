@@ -14,7 +14,7 @@
     ;; update camera
     (update *current-camera* delta)
 
-    (with-setf (clear-color) (v! 0 1 0 0)
+    (with-setf (clear-color) (v! 1 0 1 0)
       (as-frame
        ;; todo
        ))
