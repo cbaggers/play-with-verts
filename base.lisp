@@ -2,14 +2,11 @@
 
 (defvar *last-time* (get-internal-real-time))
 (defvar *mesh* nil)
-(defvar *bstream* nil)
 (defvar *sampler* nil)
 
 (defun reset ()
   (when *mesh* (free *mesh*))
-  (when *bstream* (free *bstream*))
-  (setf *mesh* (do-it))
-  (setf *bstream* (make-buffer-stream *mesh*))
+  (setf *mesh* (make-sphere))
   (setf
    *sampler*
    (sample
@@ -31,10 +28,12 @@
     (update *current-camera* delta)
 
     (as-frame
-      (when *bstream*
-        (render *current-camera*
-                *bstream*
-                *sampler*)))
+      (when *mesh*
+        (with-slots (bstream) *mesh*
+          (render *current-camera*
+                  bstream
+                  *sampler*
+                  6f0))))
     (decay-events)))
 
 (def-simple-main-loop play (:on-start #'reset)
