@@ -6,13 +6,13 @@
 
 (defun reset ()
   (when *mesh* (free *mesh*))
-  (setf *mesh* (make-sphere))
+  (setf *mesh* (make-terrain))
   (setf
    *sampler*
    (sample
     (dirt:load-image-to-texture
      (asdf:system-relative-pathname
-      :play-with-verts "./media/rust.jpg"))))
+      :play-with-verts "./media/cobble0.jpg"))))
   (reset-camera))
 
 (defun game-step ()

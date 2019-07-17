@@ -17,6 +17,19 @@
      :indices i
      :bstream (make-buffer-stream v :index-array i))))
 
+(defun make-terrain (&optional (size 10f0))
+  (destructuring-bind (v i)
+      (nineveh.mesh.data.primitives:lattice-gpu-arrays
+       :width size
+       :height size
+       :x-segments 50
+       :y-segments 50)
+    (make-instance
+     'mesh
+     :verts v
+     :indices i
+     :bstream (make-buffer-stream v :index-array i))))
+
 (defmethod free ((o mesh))
   (with-slots (verts indices bstream) o
     (free verts)

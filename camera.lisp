@@ -55,10 +55,10 @@
                         (q:from-axis-angle (v! 0 1 0) (- (x move)))))))))))
 
 (defun reset-camera (&optional (cam *current-camera*))
-  ;; (setf (pos cam) (v! -180.059 181.38274 -16.8606)
-  ;;       (rot cam) (q! 0.633 -0.129 -0.746 -0.160))
-  (setf (pos *current-camera*) (v! 0.0 0.0 32.70001)
-        (rot *current-camera*) (q:identity))
+  ;; (setf (pos *current-camera*) (v! 0.0 0.0 32.70001)
+  ;;       (rot *current-camera*) (q:identity))
+  (setf (pos *current-camera*) (v! 37.338387 45.32499 70.408005)
+        (rot *current-camera*) (q! 0.9508852 -0.22257783 0.21247639 0.033620883))
   cam)
 
 (defmethod projection ((camera perspective-camera))
