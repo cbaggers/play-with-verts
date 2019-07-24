@@ -29,11 +29,15 @@
 
     (as-frame
       (when *mesh*
-        (with-slots (bstream) *mesh*
-          (render *current-camera*
-                  bstream
-                  *sampler*
-                  6f0))))
+        (with-setf (cull-face) nil
+          (with-slots (bstream) *mesh*
+            (render *current-camera*
+                    bstream
+                    *sampler*)
+            ;; (progn ;;with-setf (depth-test-function) nil
+            ;;   (render-norms *current-camera*
+            ;;                 bstream))
+            ))))
     (decay-events)))
 
 (def-simple-main-loop play (:on-start #'reset)

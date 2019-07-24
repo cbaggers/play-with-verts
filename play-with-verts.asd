@@ -21,5 +21,5 @@
                (:file "globalists")
                (:file "camera")
                (:file "render")
-               (:file "mesh")
+               (:file "prims")
                (:file "base")))

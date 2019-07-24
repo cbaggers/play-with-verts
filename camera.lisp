@@ -33,6 +33,8 @@
   (let ((factor 90))
     (when (keyboard-button (keyboard) key.lshift)
       (setf factor 150))
+    (when (keyboard-button (keyboard) key.lalt)
+      (setf factor 10))
 
     (when (keyboard-button (keyboard) key.w)
       (v3:incf (pos camera)

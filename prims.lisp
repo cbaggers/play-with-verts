@@ -22,8 +22,8 @@
       (nineveh.mesh.data.primitives:lattice-gpu-arrays
        :width size
        :height size
-       :x-segments 50
-       :y-segments 50)
+       :x-segments 200
+       :y-segments 200)
     (make-instance
      'mesh
      :verts v
