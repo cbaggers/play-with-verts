@@ -2,23 +2,32 @@
 
 ;;------------------------------------------------------------
 
+(defstruct-g per-inst-data
+  (pos :vec3)
+  (scale :float)
+  (color :vec4))
+
+;;------------------------------------------------------------
+
 (defun-g thing-vert-stage ((vert g-pnt)
+                           (inst-data per-inst-data)
                            &uniform
                            (model->world :mat4)
                            (world->view :mat4)
                            (view->clip :mat4)
                            (time :float))
-  (let* ((model-pos (v! (pos vert) 1))
-         (normal (norm vert))
-         ;;
-         (world-pos (* model->world model-pos))
-         (view-pos (* world->view world-pos))
-         (clip-pos (* view->clip view-pos)))
-    (values
-     clip-pos
-     (s~ world-pos :xyz)
-     normal
-     (tex vert))))
+  (with-slots ((offset pos) scale) inst-data
+    (let* ((model-pos (v! (* (pos vert) scale) 1))
+           (normal (norm vert))
+           ;;
+           (world-pos (+ model-pos (v! offset 0)))
+           (view-pos (* world->view world-pos))
+           (clip-pos (* view->clip view-pos)))
+      (values
+       clip-pos
+       (s~ world-pos :xyz)
+       normal
+       (tex vert)))))
 
 (defun-g old-frag-stage ((world-pos :vec3)
                          (norm :vec3)
@@ -33,7 +42,7 @@
        (texture sam (* 6 uv)))))
 
 (defpipeline-g some-pipeline ()
-  :vertex (thing-vert-stage g-pnt)
+  :vertex (thing-vert-stage g-pnt per-inst-data)
   :fragment (old-frag-stage :vec3 :vec3 :vec2))
 
 ;;------------------------------------------------------------

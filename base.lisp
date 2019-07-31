@@ -3,10 +3,12 @@
 (defvar *last-time* (get-internal-real-time))
 (defvar *mesh* nil)
 (defvar *sampler* nil)
+(defvar *per-inst-data* nil)
 
 (defun reset ()
   (when *mesh* (free *mesh*))
-  (setf *mesh* (make-sphere))
+  (reset-per-inst-data)
+  (setf *mesh* (make-sphere *per-inst-data*))
   (setf
    *sampler*
    (sample
@@ -14,6 +16,25 @@
      (asdf:system-relative-pathname
       :play-with-verts "./media/cobble0.jpg"))))
   (reset-camera))
+
+(defun reset-per-inst-data ()
+  (when *per-inst-data*
+    (free *per-inst-data*))
+  (let* ((count 1000)
+         (pia (make-gpu-array nil :dimensions count
+                             :element-type 'per-inst-data)))
+    (with-gpu-array-as-c-array (c-arr pia)
+      (loop
+         :for i :below count
+         :for elem := (aref-c c-arr i)
+         :do
+           (setf (per-inst-data-pos elem)
+                 (v! (- (random 200f0) 100f0)
+                     (- (random 200f0) 100f0)
+                     (- (random 200f0) 100f0)))
+           (setf (per-inst-data-scale elem)
+                 (+ 0.5 (random 9f0)))))
+    (setf *per-inst-data* pia)))
 
 (defun game-step ()
   (let* ((now (get-internal-real-time))
@@ -29,15 +50,11 @@
 
     (as-frame
       (when *mesh*
-        (with-setf (cull-face) nil
-          (with-slots (bstream) *mesh*
+        (with-slots (bstream) *mesh*
+          (with-instances 1000
             (render *current-camera*
                     bstream
-                    *sampler*)
-            ;; (progn ;;with-setf (depth-test-function) nil
-            ;;   (render-norms *current-camera*
-            ;;                 bstream))
-            ))))
+                    *sampler*)))))
     (decay-events)))
 
 (def-simple-main-loop play (:on-start #'reset)

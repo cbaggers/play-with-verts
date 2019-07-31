@@ -5,17 +5,19 @@
    (indices :initarg :indices)
    (bstream :initarg :bstream)))
 
-(defun make-sphere (&optional (radius 1f0))
+(defun make-sphere (per-inst-data)
   (destructuring-bind (v i)
       (nineveh.mesh.data.primitives:sphere-gpu-arrays
-       :radius radius
+       :radius 1f0
        :lines-of-latitude 60
        :lines-of-longitude 60)
     (make-instance
      'mesh
      :verts v
      :indices i
-     :bstream (make-buffer-stream v :index-array i))))
+     :bstream (make-buffer-stream
+               (list v (cons per-inst-data 1))
+               :index-array i))))
 
 (defun make-terrain (&optional (size 10f0))
   (destructuring-bind (v i)
