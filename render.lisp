@@ -9,6 +9,39 @@
 
 ;;------------------------------------------------------------
 
+;; void downscale(uint3 threadID : SV_DispatchThreadID)
+;; {
+;;    if (all(threadID.xy < RTSize.xy))
+;;    {
+;;       float4 depths =
+;;         inputRT.Gather(samplerPoint,
+;;                        (threadID.xy + 0.5)/ RTSize.xy);
+;;
+;;       //find and return max depth
+;;       outputRT[threadID.xy] =
+;;         max(max(depths.x, depths.y),
+;;             max(depths.z, depths.w));
+;;     }
+;; }
+
+(defun-g downscale ((uv :vec2)
+                    &uniform
+                    (sam :sampler-2d))
+  (let ((depths (texture-gather sam uv)))
+    (max (max (x depths) (y depths))
+         (max (z depths) (w depths)))))
+
+(defpipeline-g downscale-pline ()
+  (blit-vert :vec2)
+  (downscale :vec2))
+
+(defun downscale-it (sampler)
+  (map-g #'downscale-pline
+         (get-quad-stream-v2)
+         :sam sampler))
+
+;;------------------------------------------------------------
+
 (defun-g thing-vert-stage ((vert g-pnt)
                            (inst-data per-inst-data)
                            &uniform
@@ -45,7 +78,21 @@
   :vertex (thing-vert-stage g-pnt per-inst-data)
   :fragment (old-frag-stage :vec3 :vec3 :vec2))
 
+(defpipeline-g occlusion-pipeline ()
+  :vertex (thing-vert-stage g-pnt per-inst-data)
+  :fragment (old-frag-stage :vec3 :vec3 :vec2))
+
 ;;------------------------------------------------------------
+
+(defun populate-occlusion-buffer (camera buffer-stream sampler)
+  (map-g #'occlusion-pipeline buffer-stream
+         :model->world (m4:identity)
+         :world->view (get-world->view-space camera)
+         :view->clip (projection camera)
+         :tex-scale 0.5f0
+         :sam sampler
+         ;;:time (now)
+         ))
 
 (defun render (camera buffer-stream sampler)
   (map-g #'some-pipeline buffer-stream
@@ -65,7 +112,7 @@
    (+ (* vert 0.5) 0.5)))
 
 (defun-g blit-frag ((uv :vec2) &uniform (sam :sampler-2d))
-  (expt (x (texture sam uv)) 30f0))
+  (expt (x (texture sam uv)) 20f0))
 
 (defpipeline-g blit ()
   (blit-vert :vec2)

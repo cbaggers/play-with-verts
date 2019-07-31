@@ -72,11 +72,14 @@
         (with-slots (bstream) *mesh*
           (with-fbo-bound (*occlusion-buffer-fbo*
                            :attachment-for-size :d)
+            (clear-fbo *occlusion-buffer-fbo*)
             (with-instances 1000
-              (render *current-camera*
-                      bstream
-                      *sampler*)))))
-      (blit-it *occlusion-buffer-sampler*))
+              (populate-occlusion-buffer *current-camera*
+                                         bstream
+                                         *sampler*)))))
+      (blit-it *occlusion-buffer-sampler*)
+      ;;(downscale-it *occlusion-buffer-sampler*)
+      )
     (decay-events)))
 
 (def-simple-main-loop play (:on-start #'reset)
