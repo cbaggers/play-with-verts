@@ -47,41 +47,6 @@
 
 ;;------------------------------------------------------------
 
-(defun-g normals-geom ((world-pos (:vec3 3))
-                       (normals (:vec3 3))
-                       (uvs (:vec2 3)))
-  (declare (output-primitive :kind :line-strip :max-vertices 6))
-  (labels ((gen-line ((index :int))
-             (let* ((magnitude 0.9)
-                    (n (normalize (aref normals index)))
-                    (n-scaled (* n magnitude))
-                    (p (gl-position (aref gl-in index)))
-                    (p0 p)
-                    (p1 (+ p (v! n-scaled 0))))
-               (emit ()
-                     p0
-                     (w p))
-               (emit ()
-                     p1
-                     (w p))
-               (end-primitive)
-               (values))))
-    (gen-line 0)
-    (gen-line 1)
-    (gen-line 2)
-    (values)))
-
-(defun-g normals-frag ((hmm :float))
-  (v! 1 1 0 1)
-  (vec4 hmm))
-
-(defpipeline-g draw-normals ()
-  :vertex (thing-vert-stage g-pnt)
-  :geometry (normals-geom (:vec3 3) (:vec3 3) (:vec2 3))
-  :fragment (normals-frag :float))
-
-;;------------------------------------------------------------
-
 (defun render (camera buffer-stream sampler)
   (map-g #'some-pipeline buffer-stream
          :model->world (m4:identity)
@@ -89,14 +54,6 @@
          :view->clip (projection camera)
          :tex-scale 0.5f0
          :sam sampler
-         ;;:time (now)
-         ))
-
-(defun render-norms (camera buffer-stream)
-  (map-g #'draw-normals buffer-stream
-         :model->world (m4:identity)
-         :world->view (get-world->view-space camera)
-         :view->clip (projection camera)
          ;;:time (now)
          ))
 
