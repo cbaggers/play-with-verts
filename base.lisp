@@ -4,9 +4,14 @@
 (defvar *mesh* nil)
 (defvar *sampler* nil)
 (defvar *per-inst-data* nil)
+(defvar *vp-size* (v! 512 512))
+(defvar *vp-size-list* '(512 512))
+(defvar *occlusion-buffer-fbo* nil)
+(defvar *occlusion-buffer* nil)
 
 (defun reset ()
   (when *mesh* (free *mesh*))
+  (reset-occlusion-buffer)
   (reset-per-inst-data)
   (setf *mesh* (make-sphere *per-inst-data*))
   (setf
@@ -16,6 +21,15 @@
      (asdf:system-relative-pathname
       :play-with-verts "./media/cobble0.jpg"))))
   (reset-camera))
+
+(defun reset-occlusion-buffer ()
+  (when *occlusion-buffer-fbo*
+    (free *occlusion-buffer-fbo*)
+    (free *occlusion-buffer*))
+  (setf *occlusion-buffer-fbo*
+        (make-fbo `(:d :dimensions ,*vp-size-list*)))
+  (setf *occlusion-buffer*
+        (attachment *occlusion-buffer-fbo* :d)))
 
 (defun reset-per-inst-data ()
   (when *per-inst-data*
@@ -43,7 +57,8 @@
     (setf *last-time* now)
 
     (setf (viewport-resolution (current-viewport))
-          (surface-resolution (current-surface)))
+          ;;(surface-resolution (current-surface))
+          *vp-size*)
 
     ;; update camera
     (update *current-camera* delta)
