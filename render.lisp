@@ -8,66 +8,18 @@
                            (world->view :mat4)
                            (view->clip :mat4)
                            (time :float))
-  (labels ((get-disp ((pos :vec2))
-             ;;(sin (+ time (x pos)))
-             (clamp (* 5.5 (perlin-noise (* 0.5 pos)))
-                    -1
-                    1.5)))
-    (let* ((model-pos3 (pos vert))
-           ;;
-           (2d-pos (s~ model-pos3 :xz))
-           (ydisp (get-disp 2d-pos))
-           (sample-offset (/ 1f0 200f0))
-           (tex-norm
-            (nineveh.normals:simple-sample-normals
-             #'get-disp 2d-pos sample-offset 200f0))
-           ;;
-           (model-pos (v! (x model-pos3)
-                          ydisp
-                          (z model-pos3)
-                          1))
-           (world-pos (* model->world model-pos))
-           (view-pos (* world->view world-pos))
-           (clip-pos (* view->clip view-pos)))
-      (values
-       clip-pos
-       (s~ world-pos :xyz)
-       tex-norm
-       (tex vert)))))
-
-
-
-(defun-g triplanar-blend ((world-normal :vec3))
-  (let* ((abs-norm (abs world-normal))
-         ;; Force weights to sum to 1.0
-         (max-norm (normalize (max abs-norm 0.00001)))
-         (b (+ (x max-norm)
-               (y max-norm)
-               (z max-norm))))
-    (/ max-norm (v! b b b))))
-
-;; good version
-(defun-g thing-frag-stage ((world-pos :vec3)
-                           (norm :vec3)
-                           (uv :vec2)
-                           &uniform
-                           (sam :sampler-2d)
-                           (tex-scale :float))
-  (let* ((norm (normalize norm))
-         (light-dir (normalize (v! 1 1 1)))
-         (light-ammount (clamp (dot norm light-dir) 0 1))
+  (let* ((model-pos (v! (pos vert) 1))
+         (normal (norm vert))
          ;;
-         (blending (triplanar-blend norm))
-         (x-axis (s~ (texture sam (* (s~ world-pos :yz) tex-scale)) :xyz))
-         (y-axis (s~ (texture sam (* (s~ world-pos :xz) tex-scale)) :xyz))
-         (z-axis (s~ (texture sam (* (s~ world-pos :xy) tex-scale)) :xyz))
-         (col (+ (* x-axis (x blending))
-                 (* y-axis (y blending))
-                 (* z-axis (z blending)))))
-    (vec4 (y blending))
-    (* (+ 0.1 light-ammount) col)))
+         (world-pos (* model->world model-pos))
+         (view-pos (* world->view world-pos))
+         (clip-pos (* view->clip view-pos)))
+    (values
+     clip-pos
+     (s~ world-pos :xyz)
+     normal
+     (tex vert))))
 
-;; bad version
 (defun-g old-frag-stage ((world-pos :vec3)
                          (norm :vec3)
                          (uv :vec2)
@@ -78,15 +30,11 @@
          (light-dir (normalize (v! 1 1 1)))
          (light-ammount (clamp (dot norm light-dir) 0 1)))
     (* (+ 0.1 light-ammount)
-       (texture sam (* 6 uv))
-       ;;(v! 1 0 0 1)
-       )))
+       (texture sam (* 6 uv)))))
 
 (defpipeline-g some-pipeline ()
   :vertex (thing-vert-stage g-pnt)
-  :fragment (thing-frag-stage :vec3 :vec3 :vec2)
-  ;; :fragment (old-frag-stage :vec3 :vec3 :vec2)
-  )
+  :fragment (old-frag-stage :vec3 :vec3 :vec2))
 
 ;;------------------------------------------------------------
 

@@ -6,7 +6,7 @@
 
 (defun reset ()
   (when *mesh* (free *mesh*))
-  (setf *mesh* (make-terrain))
+  (setf *mesh* (make-sphere))
   (setf
    *sampler*
    (sample
