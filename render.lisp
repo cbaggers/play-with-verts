@@ -58,3 +58,19 @@
          ))
 
 ;;------------------------------------------------------------
+
+(defun-g blit-vert ((vert :vec2))
+  (values
+   (v! vert 0 1)
+   (+ (* vert 0.5) 0.5)))
+
+(defun-g blit-frag ((uv :vec2) &uniform (sam :sampler-2d))
+  (expt (x (texture sam uv)) 30f0))
+
+(defpipeline-g blit ()
+  (blit-vert :vec2)
+  (blit-frag :vec2))
+
+(defun blit-it (sampler)
+  (map-g #'blit (get-quad-stream-v2)
+         :sam sampler))

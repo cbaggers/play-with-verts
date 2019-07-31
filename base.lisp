@@ -8,6 +8,7 @@
 (defvar *vp-size-list* '(512 512))
 (defvar *occlusion-buffer-fbo* nil)
 (defvar *occlusion-buffer* nil)
+(defvar *occlusion-buffer-sampler* nil)
 
 (defun reset ()
   (when *mesh* (free *mesh*))
@@ -25,11 +26,14 @@
 (defun reset-occlusion-buffer ()
   (when *occlusion-buffer-fbo*
     (free *occlusion-buffer-fbo*)
-    (free *occlusion-buffer*))
+    (free *occlusion-buffer*)
+    (free *occlusion-buffer-sampler*))
   (setf *occlusion-buffer-fbo*
         (make-fbo `(:d :dimensions ,*vp-size-list*)))
   (setf *occlusion-buffer*
-        (attachment *occlusion-buffer-fbo* :d)))
+        (attachment *occlusion-buffer-fbo* :d))
+  (setf *occlusion-buffer-sampler*
+        (sample (gpu-array-texture *occlusion-buffer*))))
 
 (defun reset-per-inst-data ()
   (when *per-inst-data*
@@ -66,10 +70,13 @@
     (as-frame
       (when *mesh*
         (with-slots (bstream) *mesh*
-          (with-instances 1000
-            (render *current-camera*
-                    bstream
-                    *sampler*)))))
+          (with-fbo-bound (*occlusion-buffer-fbo*
+                           :attachment-for-size :d)
+            (with-instances 1000
+              (render *current-camera*
+                      bstream
+                      *sampler*)))))
+      (blit-it *occlusion-buffer-sampler*))
     (decay-events)))
 
 (def-simple-main-loop play (:on-start #'reset)
