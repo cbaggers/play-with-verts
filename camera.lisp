@@ -9,7 +9,7 @@
         :accessor rot)
    (near :initform 1f0
          :accessor near)
-   (far :initform 2400f0
+   (far :initform 600f0
         :accessor far)
    (frame-size :initform nil
                :accessor frame-size)))
