@@ -15,7 +15,7 @@
    (+ (* vert 0.5) 0.5)))
 
 (defun-g blit-frag ((uv :vec2) &uniform (sam :sampler-2d))
-  (expt (x (texture sam uv)) 20f0))
+  (v! (expt (x (texture sam uv)) 20f0) 0 0))
 
 (defpipeline-g blit ()
   (blit-vert :vec2)
