@@ -14,16 +14,20 @@
    (v! vert 0 1)
    (+ (* vert 0.5) 0.5)))
 
-(defun-g blit-frag ((uv :vec2) &uniform (sam :sampler-2d))
-  (expt (x (texture sam uv)) 20f0))
+(defun-g blit-frag ((uv :vec2)
+                    &uniform
+                    (sam :sampler-2d)
+                    (power :float))
+  (v! (expt (x (texture sam uv)) power) 0 0 1))
 
 (defpipeline-g blit ()
   (blit-vert :vec2)
   (blit-frag :vec2))
 
-(defun blit-it (sampler)
+(defun blit-it (sampler &optional (power 1f0))
   (map-g #'blit (get-quad-stream-v2)
-         :sam sampler))
+         :sam sampler
+         :power power))
 
 ;;------------------------------------------------------------
 
@@ -92,10 +96,6 @@
     (* (+ 0.1 light-ammount)
        (texture sam (* 6 uv)))))
 
-(defpipeline-g some-pipeline ()
-  :vertex (thing-vert-stage g-pnt per-inst-data)
-  :fragment (old-frag-stage :vec3 :vec3 :vec2))
-
 (defpipeline-g occlusion-pipeline ()
   :vertex (thing-vert-stage g-pnt per-inst-data)
   :fragment (old-frag-stage :vec3 :vec3 :vec2))
@@ -104,16 +104,6 @@
 
 (defun populate-occlusion-buffer (camera buffer-stream sampler)
   (map-g #'occlusion-pipeline buffer-stream
-         :model->world (m4:identity)
-         :world->view (get-world->view-space camera)
-         :view->clip (projection camera)
-         :tex-scale 0.5f0
-         :sam sampler
-         ;;:time (now)
-         ))
-
-(defun render (camera buffer-stream sampler)
-  (map-g #'some-pipeline buffer-stream
          :model->world (m4:identity)
          :world->view (get-world->view-space camera)
          :view->clip (projection camera)
