@@ -31,21 +31,6 @@
 
 ;;------------------------------------------------------------
 
-;; void downscale(uint3 threadID : SV_DispatchThreadID)
-;; {
-;;    if (all(threadID.xy < RTSize.xy))
-;;    {
-;;       float4 depths =
-;;         inputRT.Gather(samplerPoint,
-;;                        (threadID.xy + 0.5)/ RTSize.xy);
-;;
-;;       //find and return max depth
-;;       outputRT[threadID.xy] =
-;;         max(max(depths.x, depths.y),
-;;             max(depths.z, depths.w));
-;;     }
-;; }
-
 (defun-g downscale ((uv :vec2)
                     &uniform
                     (sam :sampler-2d))

@@ -9,15 +9,18 @@
 (defvar *occlusion-buffer-fbo* nil)
 (defvar *occlusion-buffer* nil)
 (defvar *occlusion-buffer-sampler* nil)
-(defvar *chain-sizes* '((256 256)
-                        (128 128)
-                        (64 64)
-                        (32 32)
-                        (16 16)
-                        (8 8)
-                        (4 4)
-                        (2 2)
-                        (1 1)))
+(defparameter *chain-sizes* '((256 256)
+                              (128 128)
+                              (64 64)
+                              (32 32)
+                              (16 16)
+                              (8 8)
+                              (4 4)
+                              (2 2)
+                              (1 1)))
+(defvar *chain-textures* nil)
+(defvar *chain-fbos* nil)
+(defvar *chain-samplers* nil)
 
 (defun reset ()
   (when *mesh* (free *mesh*))
@@ -35,14 +38,29 @@
 (defun reset-occlusion-buffer ()
   (when *occlusion-buffer-fbo*
     (free *occlusion-buffer-fbo*)
-    (free *occlusion-buffer*)
-    (free *occlusion-buffer-sampler*))
+    (free (gpu-array-texture *occlusion-buffer*))
+    (free *occlusion-buffer-sampler*)
+    (map nil #'free *chain-textures*)
+    (map nil #'free *chain-fbos*))
   (setf *occlusion-buffer-fbo*
         (make-fbo `(:d :dimensions ,*vp-size-list*)))
   (setf *occlusion-buffer*
         (attachment *occlusion-buffer-fbo* :d))
   (setf *occlusion-buffer-sampler*
-        (sample (gpu-array-texture *occlusion-buffer*))))
+        (sample (gpu-array-texture *occlusion-buffer*)))
+  (setf *chain-textures*
+        (loop
+           :for size :in *chain-sizes*
+           :collect (make-texture nil :dimensions size
+                                  :element-type :float)))
+  (setf *chain-fbos*
+        (loop
+           :for tex :in *chain-textures*
+           :collect (make-fbo (list 0 tex))))
+  (setf *chain-samplers*
+        (loop
+           :for tex :in *chain-textures*
+           :collect (sample tex :wrap :clamp-to-edge))))
 
 (defun reset-per-inst-data ()
   (when *per-inst-data*
@@ -86,10 +104,17 @@
               (populate-occlusion-buffer *current-camera*
                                          bstream
                                          *sampler*)))))
-      (blit-it *occlusion-buffer-sampler*)
-      ;;(downscale-it *occlusion-buffer-sampler*)
-      )
+      (gen-mip-chain)
+      (blit-it (elt *chain-samplers* 2) 20f0))
     (decay-events)))
+
+(defun gen-mip-chain ()
+  (loop
+     :for sampler :in (cons *occlusion-buffer-sampler*
+                            *chain-samplers*)
+     :for fbo :in *chain-fbos*
+     :do (with-fbo-bound (fbo)
+           (downscale-it sampler))))
 
 (def-simple-main-loop play (:on-start #'reset)
   (game-step))
