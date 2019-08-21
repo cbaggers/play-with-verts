@@ -32,7 +32,7 @@
    (sample
     (dirt:load-image-to-texture
      (asdf:system-relative-pathname
-      :play-with-verts "./media/cobble0.jpg"))))
+      :play-with-verts "./media/wat.png"))))
   (reset-camera))
 
 (defun reset-occlusion-buffer ()
@@ -105,7 +105,7 @@
                                          bstream
                                          *sampler*)))))
       (gen-mip-chain)
-      (blit-it (elt *chain-samplers* 2) 20f0))
+      (blit-it (elt *chain-samplers* 0) 20f0))
     (decay-events)))
 
 (defun gen-mip-chain ()
