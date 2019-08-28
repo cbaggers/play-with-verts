@@ -39,6 +39,7 @@ void occlusion(uint3 threadID : SV_DispatchThreadID)
       clipPos.xyz = clipPos.xyz / clipPos.w;
 
       clipPos.xy = clamp(clipPos.xy, -1, 1);
+
       clipPos.xy =
 	clipPos.xy * float2(0.5, -0.5)
 	+ float2(0.5, 0.5);
@@ -50,6 +51,7 @@ void occlusion(uint3 threadID : SV_DispatchThreadID)
     }
 
     float4 boxUVs = float4(minXY, maxXY);
+
 
     // Calculate hi-Z buffer mip
     int2 size = (maxXY - minXY) * RTSize.xy;

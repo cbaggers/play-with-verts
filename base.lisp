@@ -21,6 +21,9 @@
 (defvar *chain-textures* nil)
 (defvar *chain-fbos* nil)
 (defvar *chain-samplers* nil)
+(defvar *occlusion-chain-texture* nil)
+(defvar *occlusion-chain-sampler* nil)
+(defvar *occlusion-chain-fbo* nil)
 
 (defun reset ()
   (when *mesh* (free *mesh*))
@@ -40,6 +43,9 @@
     (free *occlusion-buffer-fbo*)
     (free (gpu-array-texture *occlusion-buffer*))
     (free *occlusion-buffer-sampler*)
+    (free *occlusion-chain-texture*)
+    (free *occlusion-chain-sampler*)
+    (free *occlusion-chain-fbo*)
     (map nil #'free *chain-textures*)
     (map nil #'free *chain-fbos*))
   (setf *occlusion-buffer-fbo*
@@ -48,6 +54,18 @@
         (attachment *occlusion-buffer-fbo* :d))
   (setf *occlusion-buffer-sampler*
         (sample (gpu-array-texture *occlusion-buffer*)))
+  (setf *occlusion-chain-texture*
+   (make-texture nil
+                 :dimensions *vp-size-list*
+                 :element-type :float
+                 :mipmap t))
+  (setf *occlusion-chain-sampler*
+        (sample *occlusion-chain-texture*
+                :minify-filter :nearest
+                :magnify-filter :nearest))
+  (setf *occlusion-chain-fbo*
+        (make-fbo (list 0 (texref *occlusion-chain-texture*))))
+
   (setf *chain-textures*
         (loop
            :for size :in *chain-sizes*
@@ -56,7 +74,11 @@
   (setf *chain-fbos*
         (loop
            :for tex :in *chain-textures*
-           :collect (make-fbo (list 0 tex))))
+           :for i :from 1
+           :collect (make-fbo
+                     (list 0 tex)
+                     (list 1 (texref *occlusion-chain-texture*
+                                     :mipmap-level i)))))
   (setf *chain-samplers*
         (loop
            :for tex :in *chain-textures*
@@ -105,10 +127,14 @@
                                          bstream
                                          *sampler*)))))
       (gen-mip-chain)
-      (blit-it (elt *chain-samplers* 0) 20f0))
+      ;;(blit-it (elt *chain-samplers* 0) 20f0)
+      (blit-it *occlusion-chain-sampler* 20f0 0)
+      )
     (decay-events)))
 
 (defun gen-mip-chain ()
+  (with-fbo-bound (*occlusion-chain-fbo*)
+    (blit-it *occlusion-buffer-sampler*))
   (loop
      :for sampler :in (cons *occlusion-buffer-sampler*
                             *chain-samplers*)

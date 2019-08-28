@@ -24,19 +24,44 @@
   (blit-vert :vec2)
   (blit-frag :vec2))
 
-(defun blit-it (sampler &optional (power 1f0))
-  (map-g #'blit (get-quad-stream-v2)
-         :sam sampler
-         :power power))
+(defun-g blit-lod-frag ((uv :vec2)
+                        &uniform
+                        (size :vec2)
+                        (sam :sampler-2d)
+                        (power :float)
+                        (lod :int))
+  (let ((pos (ivec2 (int (* (x uv) (x size)))
+                    (int (* (y uv) (y size))))))
+    (v! (expt (x (texel-fetch sam pos lod)) power) 0 0 1)))
+
+(defpipeline-g blit-lod ()
+  (blit-vert :vec2)
+  (blit-lod-frag :vec2))
+
+(defun blit-it (sampler &optional (power 1f0) mip-level)
+  (if mip-level
+      (destructuring-bind (x y)
+          (gpu-array-dimensions
+           (texref (sampler-texture sampler)
+                   :mipmap-level mip-level))
+        (map-g #'blit-lod (get-quad-stream-v2)
+               :sam sampler
+               :power power
+               :size (v! x y)
+               :lod mip-level))
+      (map-g #'blit (get-quad-stream-v2)
+             :sam sampler
+             :power power)))
 
 ;;------------------------------------------------------------
 
 (defun-g downscale ((uv :vec2)
                     &uniform
                     (sam :sampler-2d))
-  (let ((depths (texture-gather sam uv)))
-    (max (max (x depths) (y depths))
-         (max (z depths) (w depths)))))
+  (let* ((depths (texture-gather sam uv))
+         (val (max (max (x depths) (y depths))
+                   (max (z depths) (w depths)))))
+    (values val val)))
 
 (defpipeline-g downscale-pline ()
   (blit-vert :vec2)
@@ -83,16 +108,17 @@
 
 (defpipeline-g occlusion-pipeline ()
   :vertex (thing-vert-stage g-pnt per-inst-data)
-  :fragment (old-frag-stage :vec3 :vec3 :vec2))
+  :fragment nil)
 
 ;;------------------------------------------------------------
 
 (defun populate-occlusion-buffer (camera buffer-stream sampler)
+  (declare (ignore sampler))
   (map-g #'occlusion-pipeline buffer-stream
          :model->world (m4:identity)
          :world->view (get-world->view-space camera)
          :view->clip (projection camera)
-         :tex-scale 0.5f0
-         :sam sampler
+         ;; :tex-scale 0.5f0
+         ;; :sam sampler
          ;;:time (now)
          ))
