@@ -21,5 +21,6 @@
                (:file "globalists")
                (:file "camera")
                (:file "render")
+               (:file "compute-foo")
                (:file "prims")
                (:file "base")))

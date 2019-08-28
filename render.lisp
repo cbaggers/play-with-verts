@@ -110,6 +110,10 @@
   :vertex (thing-vert-stage g-pnt per-inst-data)
   :fragment nil)
 
+(defpipeline-g fart-pipeline ()
+  :vertex (thing-vert-stage g-pnt per-inst-data)
+  :fragment (old-frag-stage :vec3 :vec3 :vec2))
+
 ;;------------------------------------------------------------
 
 (defun populate-occlusion-buffer (camera buffer-stream sampler)
@@ -122,3 +126,12 @@
          ;; :sam sampler
          ;;:time (now)
          ))
+
+(defun fart (camera buffer-stream sampler)
+  (map-g #'fart-pipeline buffer-stream
+         :model->world (m4:identity)
+         :world->view (get-world->view-space camera)
+         :view->clip (projection camera)
+         :tex-scale 0.5f0
+         :sam sampler
+         :time (now)))

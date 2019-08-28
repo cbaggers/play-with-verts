@@ -1,14 +1,6 @@
 (in-package #:play-with-verts)
 
-(defstruct-g (ssbo-test-data :layout std-430)
-  (vals (:int 100)))
-
-(defstruct-g (some-more-data :layout std-430)
-  (vals (:vec4 100)))
-
 ;;------------------------------------------------------------
-
-;; write some nonsence here :)
 
 (defstruct-g (occ-data :layout std-430)
   (bbox-min :vec3)
@@ -18,15 +10,27 @@
 (defstruct-g (obj-occ-data :layout std-430)
   (arr (occ-data 1000)))
 
+(defstruct-g (inst-counts :layout std-430)
+  (arr (:uint 10)))
+
+(defstruct-g (occ-output :layout std-430)
+  (arr (:mat4 1000)))
+
+(defun-g uv2 ((v :vec2))
+  (ivec2 (int (x v))
+         (int (y v))))
+
 (defun-g occlusion-check (&uniform
                           (inst-data obj-occ-data :ssbo)
+                          (instance-counts inst-counts :ssbo)
+                          (output occ-output :ssbo)
                           (view-projection :mat4)
                           (max-mip-level :int)
                           (input-rt :sampler-2d))
   (declare (local-size :x 1 :y 1 :z 1))
   ;;if (threadID.x < NoofInstances) ? neccesary ?
   (let ((data (aref (obj-occ-data-arr inst-data)
-                    gl-invocation-id)))
+                    (x gl-global-invocation-id))))
     (with-slots (bbox-min bbox-max world) data
       (let* ((box-size (- bbox-max bbox-min))
              (box-corners
@@ -76,25 +80,64 @@
                (dims (- b a))
                ;; Use the lower level if we only touch <= 2
                ;; texels in both dimensions
-               (mip (if (and (<= (x dims) 2)
-                             (<= (y dims) 2))
-                        level-lower
-                        mip))
+               (mip (int (if (and (<= (x dims) 2)
+                                  (<= (y dims) 2))
+                             level-lower
+                             mip)))
                ;; load depths from high z buffer
                (depth
                 (v!
-                 (texel-fetch input-rt (s~ box-uvs :xy) mip)
-                 (texel-fetch input-rt (s~ box-uvs :zy) mip)
-                 (texel-fetch input-rt (s~ box-uvs :xw) mip)
-                 (texel-fetch input-rt (s~ box-uvs :zw) mip)))
+                 (x (texel-fetch
+                     input-rt (uv2 (s~ box-uvs :xy)) mip))
+                 (x (texel-fetch
+                     input-rt (uv2 (s~ box-uvs :zy)) mip))
+                 (x (texel-fetch
+                     input-rt (uv2 (s~ box-uvs :xw)) mip))
+                 (x (texel-fetch
+                     input-rt (uv2 (s~ box-uvs :zw)) mip))))
                ;; find the max depth
                (max-depth (max (max (max (x depth) (y depth))
                                     (z depth))
                                (w depth))))
           (when (<= min-z max-depth)
-            ;; WRITE OUT TO PER INST BUFFERS \o/
-            (+ 1 2))))))
+            (with-slots ((count-arr arr)) instance-counts
+              (let ((i (atomic-add (aref count-arr 0) 1)))
+                (setf (aref (occ-output-arr output) i)
+                      world))
+              ;; WRITE OUT TO PER INST BUFFERS \o/
+              ))))))
   (values))
+
+(defpipeline-g occlude-pass ()
+  :compute occlusion-check)
+
+(defun blort (&optional (camera *current-camera*))
+  (let ((proj (m4:* (get-world->view-space camera)
+                    (projection camera)))
+        (mips (- (texture-mipmap-levels
+                  *occlusion-chain-texture*)
+                 1)))
+    (reallocate-buffer
+     (gpu-array-buffer
+      (ssbo-data *inst-counts*)))
+    (push-g '((0 0 0 0 0 0 0 0 0 0))
+            *inst-counts*)
+    (map-g #'occlude-pass (make-compute-space 1000)
+           :inst-data *per-obj-occluders*
+           :instance-counts *inst-counts*
+           :view-projection proj
+           :max-mip-level mips
+           :output *occluder-output*
+           :input-rt *occlusion-chain-sampler*)
+    (wait-on-gpu-fence (make-gpu-fence))
+    (pull-g *inst-counts*)))
+
+;; (&uniform
+;;  (inst-data obj-occ-data :ssbo)
+;;  (instance-counts inst-counts :ssbo)
+;;  (view-projection :mat4)
+;;  (max-mip-level :int)
+;;  (input-rt :sampler-2d))
 
 ;; A disadvantage of this approach is that since Gather does not
 ;; support mip level selection you will have to create a
@@ -102,64 +145,3 @@
 ;; them successively during downsampling.
 
 ;;------------------------------------------------------------
-
-
-(defun-g test-compute-func (&uniform
-                            (woop ssbo-test-data :ssbo))
-  (declare (local-size :x 10 :y 20 :z 3))
-  (with-slots (vals) woop
-    (atomic-add (aref vals 0) 1))
-  (values))
-
-
-(defun-g test-compute-func2 (&uniform
-                             (woop some-more-data :ssbo)
-                             &shared
-                             (foo :int))
-  (declare (local-size :x 10 :y 1 :z 1))
-  (with-slots (vals) woop
-    (setf (aref vals 0)
-          (v! gl-global-invocation-id 0)))
-  (values))
-
-(defpipeline-g test-compute-pline ()
-  :compute test-compute-func)
-
-(defpipeline-g test-compute-pline2 ()
-  :compute test-compute-func2)
-
-(defun test-compute ()
-  (let* ((data (make-gpu-array
-                nil :dimensions 1
-                :element-type 'ssbo-test-data))
-         (ssbo (make-ssbo data)))
-    (unwind-protect
-         (progn
-           (map-g #'test-compute-pline
-                  (make-compute-space 100)
-                  :woop ssbo)
-           (wait-on-gpu-fence (make-gpu-fence))
-           (with-gpu-array-as-c-array (c-arr data)
-             (aref-c
-              (ssbo-test-data-vals (aref-c c-arr 0))
-              0)))
-      (free ssbo)
-      (free data))))
-
-(defun test-compute2 ()
-  (let* ((data (make-gpu-array
-                nil :dimensions 1
-                :element-type 'some-more-data))
-         (ssbo (make-ssbo data)))
-    (unwind-protect
-         (progn
-           (map-g #'test-compute-pline2
-                  (make-compute-space 100)
-                  :woop ssbo)
-           (wait-on-gpu-fence (make-gpu-fence))
-           (with-gpu-array-as-c-array (c-arr data)
-             (aref-c
-              (some-more-data-vals (aref-c c-arr 0))
-              0)))
-      (free ssbo)
-      (free data))))

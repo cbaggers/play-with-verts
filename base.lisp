@@ -24,6 +24,9 @@
 (defvar *occlusion-chain-texture* nil)
 (defvar *occlusion-chain-sampler* nil)
 (defvar *occlusion-chain-fbo* nil)
+(defvar *per-obj-occluders* nil)
+(defvar *inst-counts* nil)
+(defvar *occluder-output* nil)
 
 (defun reset ()
   (when *mesh* (free *mesh*))
@@ -86,22 +89,54 @@
 
 (defun reset-per-inst-data ()
   (when *per-inst-data*
-    (free *per-inst-data*))
+    (free *per-inst-data*)
+    (free *per-obj-occluders*)
+    (free *inst-counts*)
+    (free *occluder-output*))
+  (setf *per-obj-occluders*
+        (make-ssbo nil 'obj-occ-data))
+  (setf *inst-counts*
+        (make-ssbo nil 'inst-counts))
+  (setf *occluder-output*
+        (make-ssbo nil 'occ-output))
   (let* ((count 1000)
          (pia (make-gpu-array nil :dimensions count
-                             :element-type 'per-inst-data)))
+                              :element-type 'per-inst-data))
+         (occ-data (ssbo-data *per-obj-occluders*))
+         (tmp-data (make-array count)))
+    (loop
+       :for i :below count
+       :do
+         (setf (aref tmp-data i)
+               (cons (v! (- (random 200f0) 100f0)
+                         (- (random 200f0) 100f0)
+                         (- (random 200f0) 100f0))
+                     (+ 0.5 (random 9f0)))))
     (with-gpu-array-as-c-array (c-arr pia)
       (loop
-         :for i :below count
+         :for (pos . scale) :across tmp-data
+         :for i :from 0
          :for elem := (aref-c c-arr i)
          :do
-           (setf (per-inst-data-pos elem)
-                 (v! (- (random 200f0) 100f0)
-                     (- (random 200f0) 100f0)
-                     (- (random 200f0) 100f0)))
-           (setf (per-inst-data-scale elem)
-                 (+ 0.5 (random 9f0)))))
-    (setf *per-inst-data* pia)))
+           (setf (per-inst-data-pos elem) pos
+                 (per-inst-data-scale elem) scale)))
+    (setf *per-inst-data* pia)
+
+    ;; populate per-obj occluder data
+    (with-gpu-array-as-c-array (c-arr occ-data)
+      (let ((pia (obj-occ-data-arr (aref-c c-arr 0))))
+        (loop
+           :for (pos . scale) :across tmp-data
+           :for i :from 0
+           :for elem := (aref-c pia i)
+           :for offset := (v! scale scale scale)
+           :do
+             (setf (occ-data-bbox-min elem)
+                   (v3:- pos offset))
+             (setf (occ-data-bbox-max elem)
+                   (v3:+ pos offset))
+             (setf (occ-data-world elem)
+                   (m4:translation pos)))))))
 
 (defun game-step ()
   (let* ((now (get-internal-real-time))
@@ -128,8 +163,7 @@
                                          *sampler*)))))
       (gen-mip-chain)
       ;;(blit-it (elt *chain-samplers* 0) 20f0)
-      (blit-it *occlusion-chain-sampler* 20f0 0)
-      )
+      (blit-it *occlusion-chain-sampler* 20f0 0))
     (decay-events)))
 
 (defun gen-mip-chain ()
