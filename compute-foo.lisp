@@ -13,6 +13,9 @@
 (defstruct-g (inst-counts :layout std-430)
   (arr (:uint 10)))
 
+(defstruct-g (inst-counts2 :layout std-430)
+  (arr (elements-indirect-command 10)))
+
 (defstruct-g (occ-output :layout std-430)
   (arr (:mat4 1000)))
 
@@ -22,7 +25,7 @@
 
 (defun-g occlusion-check (&uniform
                           (inst-data obj-occ-data :ssbo)
-                          (instance-counts inst-counts :ssbo)
+                          (instance-counts inst-counts2 :ssbo)
                           (output occ-output :ssbo)
                           (view-projection :mat4)
                           (max-mip-level :int)
@@ -101,7 +104,9 @@
                                (w depth))))
           (when (<= min-z max-depth)
             (with-slots ((count-arr arr)) instance-counts
-              (let ((i (atomic-add (aref count-arr 0) 1)))
+              (let* ((i (atomic-add
+                         (elements-indirect-command-instance-count (aref count-arr 0))
+                         1)))
                 (setf (aref (occ-output-arr output) i)
                       world))
               ;; WRITE OUT TO PER INST BUFFERS \o/
@@ -111,26 +116,50 @@
 (defpipeline-g occlude-pass ()
   :compute occlusion-check)
 
+;; Error compiling compute-shader:
+;; 0(78) : error C7611: argument 1 to atomicAdd needs to be a
+;; buffer variable, shared variable or a pointer
+;;
+;;uint I0 = atomicAdd(g_with_slots_tmp5371.INSTANCE_COUNT,uint(1))
+
 (defun blort (&optional (camera *current-camera*))
   (let ((proj (m4:* (get-world->view-space camera)
-                    (projection camera)))
+                    (projection camera)s))
         (mips (- (texture-mipmap-levels
                   *occlusion-chain-texture*)
                  1)))
     (reallocate-buffer
      (gpu-array-buffer
-      (ssbo-data *inst-counts*)))
-    (push-g '((0 0 0 0 0 0 0 0 0 0))
-            *inst-counts*)
-    (map-g #'occlude-pass (make-compute-space 1000)
-           :inst-data *per-obj-occluders*
-           :instance-counts *inst-counts*
-           :view-projection proj
-           :max-mip-level mips
-           :output *occluder-output*
-           :input-rt *occlusion-chain-sampler*)
-    (wait-on-gpu-fence (make-gpu-fence))
-    (pull-g *inst-counts*)))
+      (ssbo-data *inst-counts2*)))
+    (with-slots (bstream) *mesh*
+      (with-gpu-array-as-c-array
+          (inst-counts-arr (ssbo-data *inst-counts2*))
+        (set-draw-command
+         (inst-counts2-arr (aref-c inst-counts-arr 0))
+         0
+         bstream
+         0))
+      (map-g #'occlude-pass (make-compute-space 1000)
+             :inst-data *per-obj-occluders*
+             :instance-counts *inst-counts2*
+             :view-projection proj
+             :max-mip-level mips
+             :output *occluder-output*
+             :input-rt *occlusion-chain-sampler*)
+      (wait-on-gpu-fence (make-gpu-fence))
+
+      (multi-map-g #'fart-pipeline
+                   (ssbo-data *inst-counts2*)
+                   bstream
+                   :model->world (m4:identity)
+                   :world->view (get-world->view-space camera)
+                   :view->clip (projection camera)
+                   :tex-scale 0.5f0
+                   :sam *sampler*
+                   :time (now)))
+    ;; (wait-on-gpu-fence (make-gpu-fence))
+    ;; (pull-g *inst-counts2*)
+    ))
 
 ;; (&uniform
 ;;  (inst-data obj-occ-data :ssbo)

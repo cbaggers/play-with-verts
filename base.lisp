@@ -26,6 +26,7 @@
 (defvar *occlusion-chain-fbo* nil)
 (defvar *per-obj-occluders* nil)
 (defvar *inst-counts* nil)
+(defvar *inst-counts2* nil)
 (defvar *occluder-output* nil)
 
 (defun reset ()
@@ -92,11 +93,14 @@
     (free *per-inst-data*)
     (free *per-obj-occluders*)
     (free *inst-counts*)
+    (free *inst-counts2*)
     (free *occluder-output*))
   (setf *per-obj-occluders*
         (make-ssbo nil 'obj-occ-data))
   (setf *inst-counts*
         (make-ssbo nil 'inst-counts))
+  (setf *inst-counts2*
+        (make-ssbo nil 'inst-counts2))
   (setf *occluder-output*
         (make-ssbo nil 'occ-output))
   (let* ((count 1000)
@@ -151,19 +155,29 @@
     ;; update camera
     (update *current-camera* delta)
 
+    #+nil
     (as-frame
       (when *mesh*
         (with-slots (bstream) *mesh*
-          (with-fbo-bound (*occlusion-buffer-fbo*
-                           :attachment-for-size :d)
-            (clear-fbo *occlusion-buffer-fbo*)
-            (with-instances 1000
-              (populate-occlusion-buffer *current-camera*
-                                         bstream
-                                         *sampler*)))))
-      (gen-mip-chain)
+          (with-instances 1000
+            (fart *current-camera*
+                  bstream
+                  *sampler*)))))
+    (as-frame
+      ;; (when *mesh*
+      ;;   (with-slots (bstream) *mesh*
+      ;;     (with-fbo-bound (*occlusion-buffer-fbo*
+      ;;                      :attachment-for-size :d)
+      ;;       (clear-fbo *occlusion-buffer-fbo*)
+      ;;       (with-instances 1000
+      ;;         (populate-occlusion-buffer *current-camera*
+      ;;                                    bstream
+      ;;                                    *sampler*)))))
+      ;; (gen-mip-chain)
       ;;(blit-it (elt *chain-samplers* 0) 20f0)
-      (blit-it *occlusion-chain-sampler* 20f0 0))
+      ;; (blit-it *occlusion-chain-sampler* 20f0 0)
+      (blort)
+      )
     (decay-events)))
 
 (defun gen-mip-chain ()
