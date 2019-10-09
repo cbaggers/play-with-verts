@@ -1,5 +1,8 @@
 (in-package #:play-with-verts)
 
+(defvar *just-depth-fbo* nil)
+(defvar *depth-sampler* nil)
+
 ;;------------------------------------------------------------
 
 (defstruct-g (plight :layout :std-140)
@@ -92,12 +95,12 @@
             tbn)))
 
 (defun-g thing-vert-stage ((vert g-pnt)
-                          (tb tb-data)
-                          &uniform
-                          (model->world :mat4)
-                          (world->view :mat4)
-                          (view->clip :mat4)
-                          (scale :float))
+                           (tb tb-data)
+                           &uniform
+                           (model->world :mat4)
+                           (world->view :mat4)
+                           (view->clip :mat4)
+                           (scale :float))
   (vert-stage-common (pos vert) scale (norm vert)
                      (tb-data-tangent tb) (tb-data-bitangent tb)
                      (treat-uvs (tex vert))
@@ -152,7 +155,7 @@
 
 (defun-g prep-final-color ((color :vec3))
   (let* ((final-color (tone-map-uncharted2
-                       color *exposure* 2f0))
+                       color *exposure* 12f0))
          (luma (rgb->luma-bt601 final-color)))
     (v! final-color luma)))
 
@@ -178,8 +181,8 @@
                           (normal-map :sampler-2d)
                           (now :float)
                           (lights light-set :ubo)
-                          (mult :float)
-                          (cutaway-height :float))
+                          (depth-sam :sampler-2d)
+                          (viewport-res :vec2))
   (let* (;; process inputs
          (normal (normalize frag-normal))
          (norm-from-map (norm-from-map normal-map uv))
@@ -190,22 +193,22 @@
          (diffuse-power (vec3 0.0))
          ;;
          (normal (* tbn norm-from-map))
-         (now (* 2.5 now)))
+         (now (* 2.5 now))
+
+         (duv (/ (s~ gl-frag-coord :xy) viewport-res))
+         (cut-depth (x (texture depth-sam duv))))
     ;;
-    (cond
-      ((> (y pos) cutaway-height)
-       (discard))
-      ((> mult 1.01)
-       (setf diffuse-power (vec3 1)))
-      (t
-       (with-slots (plights count) lights
-         (dotimes (i count)
-           (incf diffuse-power
-                 (clamp
-                  (calc-light pos
-                              normal
-                              (aref plights i))
-                  0 1))))))
+    (when (< (z gl-frag-coord) cut-depth)
+      (discard))
+
+    (with-slots (plights count) lights
+      (dotimes (i count)
+        (incf diffuse-power
+              (clamp
+               (calc-light pos
+                           normal
+                           (aref plights i))
+               0 1))))
     ;;
     (let* ((light-amount (+ ambient diffuse-power))
            (color (* albedo light-amount)))
@@ -216,49 +219,57 @@
   (tile-frag-stage :vec3 :vec3 :vec2 :mat3))
 
 
-(defun-g tile-fake-top-frag-stage
-    ((frag-normal :vec3)
-     (pos :vec3)
-     (uv :vec2)
-     (tbn :mat3)
-     &uniform
-     (albedo :sampler-2d)
-     (normal-map :sampler-2d)
-     (now :float)
-     (lights light-set :ubo)
-     (mult :float)
-     (cam-pos-world :vec3)
-     (cutaway-height :float)
-     (fake-top-sampler :sampler-2d))
-  ;;
-  (if (> (y pos) cutaway-height)
-      (discard)
-      (let* ((y-diff (- (y cam-pos-world) (y pos)))
-             (full-ray (- pos cam-pos-world))
-             (y-to-cutaway (- (y cam-pos-world)
-                              cutaway-height))
-             (scaled-ray (* (/ full-ray y-diff)
-                            y-to-cutaway))
-             (top-pos (+ cam-pos-world scaled-ray))
-             (uv (* 0.1 (s~ top-pos :xz)))
-             ;;
-             (albedo (gamma-correct
-                      (s~ (texture fake-top-sampler uv) :xyz)))
-             (ambient (vec3 *ambient*))
-             (diffuse-power (vec3 0.0))
-             (normal (v! 0 1 0)))
-        (with-slots (plights count) lights
-          (dotimes (i count)
-            (incf diffuse-power
-                  (clamp
-                   (calc-light top-pos
-                               normal
-                               (aref plights i))
-                   0 1))))
-        (let* ((light-amount (+ ambient diffuse-power))
-               (color (* albedo light-amount)))
-          (prep-final-color color)))))
+;;------------------------------------------------------------
 
-(defpipeline-g tile-fake-top-pipeline ()
-  (thing-vert-stage g-pnt tb-data)
-  (tile-fake-top-frag-stage :vec3 :vec3 :vec2 :mat3))
+(defpipeline-g just-write-depth-pline ()
+  :vertex (thing-vert-stage g-pnt tb-data)
+  :fragment nil)
+
+;;------------------------------------------------------------
+
+(defun-g sum-faces-f ((frag-normal :vec3)
+                      (pos :vec3)
+                      (uv :vec2)
+                      (tbn :mat3))
+  (v! (if gl-front-facing -1 1) 0 0 0))
+
+(defpipeline-g sum-faces-pline ()
+  :vertex (thing-vert-stage g-pnt tb-data)
+  :fragment (sum-faces-f :vec3 :vec3 :vec2 :mat3))
+
+(defun sum-faces (camera thing)
+  (map-g #'sum-faces-pline (buf-stream thing)
+         :model->world (get-model->world-space thing)
+         :world->view (get-world->view-space camera)
+         :view->clip (projection camera)
+         :scale (scale thing)))
+
+;;------------------------------------------------------------
+
+(defun-g final-draw-cutaway-f ((frag-normal :vec3)
+                               (pos :vec3)
+                               (uv :vec2)
+                               (tbn :mat3)
+                               &uniform
+                               (albedo :sampler-2d)
+                               (mask :sampler-2d)
+                               (viewport-res :vec2))
+  (let* ((muv (/ (s~ gl-frag-coord :xy) viewport-res))
+         (mask-val (x (texture mask muv))))
+    (when (<= mask-val 0)
+      (discard))
+    (texture albedo (* 0.1 (s~ pos :xz)))))
+
+(defpipeline-g final-draw-cutaway-pline ()
+  :vertex (thing-vert-stage g-pnt tb-data)
+  :fragment (final-draw-cutaway-f :vec3 :vec3 :vec2 :mat3))
+
+(defun final-draw-cutaway (camera thing albedo mask)
+  (map-g #'final-draw-cutaway-pline (buf-stream thing)
+         :model->world (get-model->world-space thing)
+         :world->view (get-world->view-space camera)
+         :view->clip (projection camera)
+         :scale (scale thing)
+         :albedo albedo
+         :mask mask
+         :viewport-res (viewport-resolution (current-viewport))))

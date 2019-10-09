@@ -88,9 +88,6 @@
 ;;------------------------------------------------------------
 ;; Tile
 
-(defvar *fake-top-sampler* nil)
-(defparameter *cutaway-height* 12f0)
-
 (defclass tile (thing)
   ((stream :initarg :stream)
    (sampler :initform (get-tex "brickwall.jpg"))
@@ -114,25 +111,8 @@
          :normal-map (or (normals thing)
                          *fallback-normal-map*)
          :scale (scale thing)
-         :mult 1.0
-         :cutaway-height *cutaway-height*))
-
-(defmethod draw-fake-top ((camera camera)
-                          (thing tile))
-  (map-g #'tile-fake-top-pipeline (buf-stream thing)
-         :model->world (get-model->world-space thing)
-         :world->view (get-world->view-space camera)
-         :view->clip (projection camera)
-         :albedo (sampler thing)
-         :now (now)
-         :lights *lights*
-         :normal-map (or (normals thing)
-                         *fallback-normal-map*)
-         :scale (scale thing)
-         :mult 1.0
-         :cam-pos-world (pos camera)
-         :cutaway-height *cutaway-height*
-         :fake-top-sampler *fake-top-sampler*))
+         :depth-sam *depth-sampler*
+         :viewport-res (viewport-resolution (current-viewport))))
 
 ;;------------------------------------------------------------
 ;; Assimp thing
@@ -169,5 +149,29 @@
          :view->clip (projection camera)
          :scale (scale thing)
          :id 0f0))
+
+;;------------------------------------------------------------
+;; cutaway
+
+(defclass cutaway (thing)
+  ((stream :initarg :stream)
+   (sampler :initform (get-tex "brickwall.jpg"))
+   (normals :initform (get-tex "brickwall_normal.jpg"))))
+
+(defun make-cutaway (pos &optional (size 40f0))
+  (check-type pos vec3)
+  (check-type size single-float)
+  (let ((obj (make-instance 'cutaway
+                            :stream (box size 0.01f0 size))))
+    (setf (pos obj) pos)
+    obj))
+
+(defmethod draw ((camera camera)
+                 (thing cutaway))
+  (map-g #'just-write-depth-pline (buf-stream thing)
+         :model->world (get-model->world-space thing)
+         :world->view (get-world->view-space camera)
+         :view->clip (projection camera)
+         :scale (scale thing)))
 
 ;;------------------------------------------------------------

@@ -8,6 +8,13 @@
 (defvar *fallback-normal-map* nil)
 
 (defvar *test-tile* nil)
+(defvar *second-tile* nil)
+(defvar *cutaway* nil)
+
+(defvar *sum-fbo* nil)
+(defvar *sum-sampler* nil)
+
+(defvar *fake-top-sampler* nil)
 
 (defun reset (&key force)
   ;;
@@ -25,6 +32,8 @@
     (load-assimp-things "sponza_obj/sponza.obj" 0.2f0)
     (setf *fake-top-sampler* (get-tex "scratched.jpg"))
     (setf *test-tile* (make-tile (v! 0 10 0)))
+    (setf *second-tile* (make-tile (v! -8 10 0)))
+    (setf *cutaway* (make-cutaway (v! 0 12 0)))
     (make-ball (v! 0 10 20) 3.0)
     (reset-lights))
   ;;
@@ -40,7 +49,17 @@
                   (list 1 :element-type :rgba16f)
                   :d))
   (setf *scene-sampler*
-        (sample (attachment-tex *scene-fbo* 0))))
+        (sample (attachment-tex *scene-fbo* 0)))
+
+  (setf *sum-fbo*
+        (make-fbo (list 0 :element-type :float) :d))
+  (setf *sum-sampler*
+        (sample (attachment-tex *sum-fbo* 0)))
+
+  (setf *just-depth-fbo*
+        (make-fbo (list :d (attachment *sum-fbo* :d))))
+  (setf *depth-sampler*
+        (sample (attachment-tex *sum-fbo* :d))))
 
 (defun reset-lights ()
   (when *lights*
@@ -67,6 +86,15 @@
     (setf *lights-arr* (make-gpu-array light-data)
           *lights* (make-ubo *lights-arr* 'light-set))))
 
+(defvar *additive-blend*
+  (make-blending-params
+   :mode-rgb :func-add
+   :mode-alpha :func-add
+   :source-rgb :one
+   :source-alpha :one
+   :destination-rgb :one
+   :destination-alpha :one))
+
 (defun game-step ()
   (let* ((now (get-internal-real-time))
          (delta (* (- now *last-time*) 0.001))
@@ -80,22 +108,34 @@
     (setf (resolution (current-viewport))
           (surface-resolution (current-surface)))
 
-    (setf (pos *test-tile*)
-          (v! (* 10 (sin (* now 0.001))) 10 0))
+    (clear-fbo *scene-fbo*)
+    (clear-fbo *sum-fbo*)
+
+    (with-fbo-bound (*just-depth-fbo* :attachment-for-size :d)
+      (draw *current-camera* *cutaway*))
+
+    (with-fbo-bound (*sum-fbo* :with-blending t)
+      (with-blending *additive-blend*
+        (with-setf* ((cull-face) nil
+                     (depth-test-function) #'>
+                     (depth-mask) nil)
+          (loop
+             :for thing :in *things*
+             :do (when (typep thing 'tile)
+                   (sum-faces *current-camera* thing))))))
 
     ;; draw stuff
     (with-fbo-bound (*scene-fbo*)
-      (clear-fbo *scene-fbo*)
       (loop :for thing :in *things* :do
            (update thing delta)
-           (draw *current-camera* thing)
-           (with-setf (cull-face) :front
-             (when (typep thing 'tile)
-               (draw-fake-top *current-camera* thing)))))
+           (draw *current-camera* thing))
+      (final-draw-cutaway *current-camera* *cutaway*
+                          *fake-top-sampler*
+                          *sum-sampler*))
 
     (as-frame
       (fxaa3-pass *scene-sampler*)
-      ;;(draw-tex *scene-sampler*)
+      ;;(draw-tex *sum-sampler*)
       )
     (decay-events)))
 
