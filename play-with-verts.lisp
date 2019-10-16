@@ -95,6 +95,8 @@
    :destination-rgb :one
    :destination-alpha :one))
 
+(defvar *cutaway-angle* 0f0)
+
 (defun game-step ()
   (let* ((now (get-internal-real-time))
          (delta (* (- now *last-time*) 0.001))
@@ -132,6 +134,14 @@
       (final-draw-cutaway *current-camera* *cutaway*
                           *fake-top-sampler*
                           *sum-sampler*))
+
+    (when (keyboard-button (keyboard) key.lalt)
+      (incf (y (pos *cutaway*))
+            (* (y (mouse-move (mouse))) -0.3))
+      (incf *cutaway-angle*
+            (* (x (mouse-move (mouse))) 0.02))
+      (setf (rot *cutaway*)
+            (q:from-fixed-angles 0f0 0f0 *cutaway-angle*)))
 
     (as-frame
       (fxaa3-pass *scene-sampler*)
