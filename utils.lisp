@@ -5,3 +5,6 @@
   ;; in a bunch of places
   (/ (float (get-internal-real-time))
      1000f0))
+
+(defmethod cepl:free ((obj null))
+  nil)

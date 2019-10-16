@@ -38,3 +38,8 @@
     (free indices)
     (free bstream)
     nil))
+
+(defun load-tex (local-path)
+  (dirt:load-image-to-texture
+   (asdf:system-relative-pathname
+    :play-with-verts local-path)))))
