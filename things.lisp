@@ -69,8 +69,8 @@
 
 (defclass box (thing)
   ((stream :initarg :stream)
-   (sampler :initform (get-tex "brickwall.jpg"))
-   (normals :initform (get-tex "brickwall_normal.jpg"))))
+   (sampler :initform (get-tex "media/brickwall.jpg"))
+   (normals :initform (get-tex "media/brickwall_normal.jpg"))))
 
 (defun make-box (pos &optional (size (v! 2 2 2)))
   (check-type pos vec3)
@@ -86,8 +86,8 @@
 
 (defclass ball (thing)
   ((stream :initarg :stream)
-   (sampler :initform (get-tex "brickwall.jpg"))
-   (normals :initform (get-tex "brickwall_normal.jpg"))
+   (sampler :initform (get-tex "media/brickwall.jpg"))
+   (normals :initform (get-tex "media/brickwall_normal.jpg"))
    (id :initform (incf *creature-id*))))
 
 

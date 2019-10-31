@@ -109,7 +109,7 @@
             (if tex-file
                 (get-tex
                  (hack-asset-name scene-path tex-file))
-                (get-tex "rust.jpg")))
+                (get-tex "media/rust.jpg")))
            (norm-sampler
             (if norm-file
                 (get-tex
