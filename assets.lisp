@@ -109,7 +109,7 @@
             (if tex-file
                 (get-tex
                  (hack-asset-name scene-path tex-file))
-                (get-tex "rust.jpg")))
+                (get-tex "media/rust.jpg")))
            (norm-sampler
             (if norm-file
                 (get-tex
@@ -123,7 +123,7 @@
       (let ((v-arr (make-gpu-array nil :dimensions (length vertices)
                                    :element-type 'assimp-mesh))
             (i-arr (make-gpu-array nil :dimensions (* 3 (length faces))
-                                   :element-type :ushort)))
+                                   :element-type :uint)))
         (with-gpu-array-as-c-array (c-arr i-arr)
           (loop
              :for indices :across faces
