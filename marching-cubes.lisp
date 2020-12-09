@@ -347,10 +347,7 @@
     (values verts normals)))
 
 (defun circle (radius v3point)
-  (- (min radius
-          (min (sin (* 2 (x v3point)))
-               (* 0.5 (cos (* 3 (y v3point))))))
-     (v3:length v3point)))
+  (- radius (v3:length v3point)))
 
 (defun do-it ()
   (multiple-value-bind (verts norms)
