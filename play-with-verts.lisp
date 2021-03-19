@@ -19,7 +19,7 @@
 
     ;; set the position of our viewport
     (setf (resolution (current-viewport))
-          (surface-resolution (current-surface *cepl-context*)))
+          (surface-resolution (current-surface (cepl-context))))
 
     ;; clear the default fbo
     (clear)
